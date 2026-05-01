@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - 视频热度分析系统</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --void: #030508;
+            --surface: #0a1019;
+            --card-bg: rgba(12, 20, 35, 0.85);
+            --card-border: rgba(0, 212, 255, 0.15);
+            --cyan: #00d4ff;
+            --cyan-glow: rgba(0, 212, 255, 0.4);
+            --cyan-dim: rgba(0, 212, 255, 0.08);
+            --magenta: #ff3d9a;
+            --gold: #ffc107;
+            --green: #00e676;
+            --red: #ff5252;
+            --text: #e8f4f8;
+            --text-secondary: rgba(232, 244, 248, 0.6);
+            --text-muted: rgba(232, 244, 248, 0.35);
+            --gradient-heat: linear-gradient(135deg, #00d4ff 0%, #ff3d9a 50%, #ffc107 100%);
+        }
+
+        [data-theme="light"] {
+            --void: #f0f2f7;
+            --surface: #ffffff;
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --card-border: rgba(0, 0, 0, 0.1);
+            --cyan: #0088cc;
+            --cyan-glow: rgba(0, 136, 204, 0.3);
+            --cyan-dim: rgba(0, 136, 204, 0.08);
+            --magenta: #e91e63;
+            --text: #1a1a2e;
+            --text-secondary: rgba(26, 26, 46, 0.6);
+            --text-muted: rgba(26, 26, 46, 0.35);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, sans-serif;
+            background: var(--void);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--card-border);
+            padding: 0 40px;
+            backdrop-filter: blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-inner {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 80px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            background: var(--gradient-heat);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+
+        .logo-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            background: var(--gradient-heat);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .user-role {
+            font-size: 11px;
+            padding: 2px 8px;
+            background: var(--cyan-dim);
+            color: var(--cyan);
+            border-radius: 4px;
+        }
+
+        .theme-toggle, .logout-btn {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover, .logout-btn:hover {
+            border-color: var(--cyan);
+            box-shadow: 0 0 20px var(--cyan-dim);
+        }
+
+        .logout-btn {
+            font-size: 16px;
+            color: var(--red);
+        }
+
+        main {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        .page-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .page-title::after {
+            content: '';
+            flex: 1;
+            height: 2px;
+            background: var(--gradient-heat);
+            border-radius: 1px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            border-color: var(--cyan);
+            color: var(--text);
+        }
+
+        .tab.active {
+            background: var(--cyan-dim);
+            border-color: var(--cyan);
+            color: var(--cyan);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 14px 18px;
+            background: var(--void);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--cyan);
+            box-shadow: 0 0 20px var(--cyan-dim);
+        }
+
+        .btn {
+            padding: 14px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--gradient-heat);
+            color: #fff;
+            box-shadow: 0 0 30px var(--cyan-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px var(--cyan-glow);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
+        .btn-refresh {
+            background: var(--cyan-dim);
+            color: var(--cyan);
+            border: 1px solid var(--cyan);
+        }
+
+        .btn-delete {
+            background: rgba(255, 82, 82, 0.1);
+            color: var(--red);
+            border: 1px solid var(--red);
+        }
+
+        .btn-delete:hover {
+            background: rgba(255, 82, 82, 0.2);
+        }
+
+        .btn-danger {
+            background: var(--red);
+            color: white;
+            border: 1px solid var(--red);
+        }
+
+        .btn-danger:hover {
+            background: #e04747;
+        }
+
+        .btn-tiny {
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+            background: var(--surface);
+            border: 1px solid var(--card-border);
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .btn-tiny:hover {
+            background: var(--card-hover);
+            color: var(--text);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-edit {
+            background: rgba(255, 193, 7, 0.1);
+            color: var(--gold);
+            border: 1px solid var(--gold);
+        }
+
+        .video-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .video-item {
+            background: var(--void);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            gap: 16px;
+            transition: all 0.3s;
+        }
+
+        .video-item:hover {
+            border-color: var(--cyan);
+            box-shadow: 0 0 20px var(--cyan-dim);
+        }
+
+        .video-thumb {
+            width: 120px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+
+        .video-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .video-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .video-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .video-meta span {
+            padding: 2px 8px;
+            background: var(--card-bg);
+            border-radius: 4px;
+        }
+
+        .video-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .user-table th, .user-table td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .user-table th {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .user-table tr:hover {
+            background: var(--cyan-dim);
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-badge.active {
+            background: rgba(0, 230, 118, 0.1);
+            color: var(--green);
+        }
+
+        .status-badge.inactive {
+            background: rgba(255, 82, 82, 0.1);
+            color: var(--red);
+        }
+
+        .role-badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .role-badge.admin {
+            background: var(--cyan-dim);
+            color: var(--cyan);
+        }
+
+        .role-badge.user {
+            background: rgba(255, 193, 7, 0.1);
+            color: var(--gold);
+        }
+
+        .cookie-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .cookie-group {
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .cookie-group-title {
+            padding: 12px 16px;
+            background: var(--surface);
+            font-weight: 600;
+            font-size: 14px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .cookie-group .cookie-item {
+            border: none;
+            border-radius: 0;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .cookie-group .cookie-item:last-child {
+            border-bottom: none;
+        }
+
+        .cookie-name {
+            font-weight: 600;
+            color: var(--cyan);
+        }
+
+        .cookie-item {
+            background: var(--void);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .cookie-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .cookie-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .cookie-date {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .cookie-platform {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cookie-preview {
+            font-size: 11px;
+            color: var(--text-muted);
+            word-break: break-all;
+            background: var(--surface);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+        }
+
+        .proxy-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .proxy-item {
+            background: var(--void);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .proxy-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .proxy-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .proxy-status.active {
+            background: var(--green);
+        }
+
+        .proxy-status.inactive {
+            background: var(--red);
+        }
+
+        .proxy-addr {
+            font-family: monospace;
+            font-weight: 600;
+        }
+
+        .proxy-protocol {
+            font-size: 11px;
+            padding: 2px 8px;
+            background: var(--cyan-dim);
+            color: var(--cyan);
+            border-radius: 10px;
+        }
+
+        .proxy-stats {
+            display: flex;
+            gap: 12px;
+        }
+
+        .stat-item {
+            font-size: 12px;
+        }
+
+        .stat-item.success {
+            color: var(--green);
+        }
+
+        .stat-item.fail {
+            color: var(--red);
+        }
+
+        .proxy-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--card-border);
+            border-top-color: var(--cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .message {
+            padding: 14px 18px;
+            border-radius: 10px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.error {
+            background: rgba(255, 82, 82, 0.1);
+            border: 1px solid var(--red);
+            color: var(--red);
+            display: block;
+        }
+
+        .message.success {
+            background: rgba(0, 230, 118, 0.1);
+            border: 1px solid var(--green);
+            color: var(--green);
+            display: block;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            border: 1px solid var(--card-border);
+            color: var(--text);
+        }
+
+        .login-prompt {
+            text-align: center;
+            padding: 80px 40px;
+        }
+
+        .login-prompt h2 {
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+
+        .login-prompt p {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            header { padding: 0 20px; }
+            main { padding: 20px; }
+            .video-list { grid-template-columns: 1fr; }
+            .header-right { gap: 8px; }
+            .user-info { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-inner">
+            <div class="logo">
+                <div class="logo-icon">📊</div>
+                <span class="logo-text">HEAT ANALYTICS</span>
+            </div>
+            <div class="header-right">
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <span class="user-name" id="userName"></span>
+                    <span class="user-role" id="userRole"></span>
+                </div>
+                <button class="theme-toggle" onclick="toggleTheme()" title="切换主题">🌙</button>
+                <button class="logout-btn" id="logoutBtn" onclick="logout()" title="退出" style="display: none;">🚪</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div id="message" class="message"></div>
+
+        <!-- 未登录提示 -->
+        <div id="loginPrompt" class="card login-prompt">
+            <h2>请先登录</h2>
+            <p>管理后台需要登录后才能访问</p>
+            <button class="btn btn-primary" onclick="location.href='/login'">前往登录</button>
+        </div>
+
+        <!-- 管理后台内容 -->
+        <div id="adminContent" style="display: none;">
+            <h1 class="page-title">⚙️ 管理后台</h1>
+
+            <div class="tabs">
+                <button class="tab active" data-tab="videos">📹 视频管理</button>
+                <button class="tab" data-tab="cookies" id="tabCookies">🍪 Cookie配置</button>
+                <button class="tab" data-tab="proxies" id="tabProxies">🌐 代理池</button>
+                <button class="tab" data-tab="users" id="tabUsers">👥 用户管理</button>
+            </div>
+
+            <!-- 视频管理 -->
+            <div id="tab-videos" class="tab-content active">
+                <div class="card">
+                    <div class="card-title">🔗 添加视频</div>
+                    <form id="addForm">
+                        <div class="form-group">
+                            <label class="form-label">视频链接 (B站)</label>
+                            <input type="text" class="form-input" id="videoUrl" placeholder="https://www.bilibili.com/video/BV1xx4y1d7UW" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="addBtn">
+                            <span>➕</span> 添加并爬取数据
+                        </button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📋 视频列表</div>
+                    <div id="videoList" class="loading">
+                        <div class="spinner"></div>
+                        <div>加载中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cookie配置 -->
+            <div id="tab-cookies" class="tab-content">
+                <div class="card">
+                    <div class="card-title">🍪 B站Cookie配置</div>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
+                        配置B站Cookie后，可以获取评论数据。Cookie需要从浏览器获取。
+                    </p>
+
+                    <div style="background: var(--void); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                        <h4 style="margin-bottom: 12px;">💻 获取Cookie步骤</h4>
+                        <ol style="font-size: 13px; color: var(--text-secondary); line-height: 2; padding-left: 20px;">
+                            <li>电脑浏览器打开 <a href="https://www.bilibili.com" target="_blank" style="color: var(--cyan);">bilibili.com</a> 并登录账号</li>
+                            <li>按 <kbd style="background: var(--surface); padding: 2px 6px; border-radius: 4px; font-family: monospace;">F12</kbd> 打开开发者工具</li>
+                            <li>点击顶部 <strong>Network</strong>（网络）标签</li>
+                            <li>在浏览器地址栏按 <kbd style="background: var(--surface); padding: 2px 6px; border-radius: 4px; font-family: monospace;">回车</kbd> 刷新页面</li>
+                            <li>在左侧列表点击任意一个请求名称</li>
+                            <li>在右侧找到 <strong>Headers</strong> → <strong>Request Headers</strong> → <strong>Cookie</strong></li>
+                            <li>复制整个Cookie值，粘贴到下方输入框</li>
+                        </ol>
+                        <div style="background: var(--surface); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 12px; word-break: break-all; color: var(--text-muted); margin-top: 16px;">
+                            DEDE_USER_ID=xxx; SESSDATA=xxx; bili_jct=xxx...
+                        </div>
+                    </div>
+
+                    <form id="cookieForm">
+                        <div style="display: grid; grid-template-columns: 150px 1fr; gap: 12px; margin-bottom: 12px;">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">平台</label>
+                                <select class="form-input" id="cookiePlatform">
+                                    <option value="bilibili">🎬 B站</option>
+                                    <option value="douyin">📱 抖音</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Cookie名称</label>
+                                <input type="text" class="form-input" id="cookieName" placeholder="自动生成如bilibili-01">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <textarea class="form-input" id="cookieInput" rows="3" placeholder="粘贴从浏览器获取的完整Cookie"></textarea>
+                        </div>
+                        <div style="display: flex; gap: 12px; align-items: flex-end;">
+                            <button type="submit" class="btn btn-primary">
+                                <span>💾</span> 保存Cookie
+                            </button>
+                            <div class="form-group" style="flex:1; margin:0;">
+                                <input type="text" class="form-input" id="cookieTestUrl" placeholder="输入B站视频链接测试Cookie">
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="testCookie()">
+                                <span>🧪</span> 测试
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📋 已配置的Cookie</div>
+                    <div style="display: flex; gap: 12px; margin-bottom: 16px; align-items: center;">
+                        <select id="cookieFilterPlatform" class="form-input" style="width: 120px;" onchange="loadCookies()">
+                            <option value="">全部平台</option>
+                            <option value="bilibili">🎬 B站</option>
+                            <option value="douyin">📱 抖音</option>
+                        </select>
+                        <span style="color: var(--text-muted);" id="cookieCount">共 0 个</span>
+                        <div style="margin-left: auto; display: flex; gap: 8px;">
+                            <button class="btn btn-sm" onclick="selectAllCookies()">全选</button>
+                            <button class="btn btn-danger btn-sm" onclick="batchDeleteCookies()">🗑️ 批量删除</button>
+                        </div>
+                    </div>
+                    <div id="cookieList" class="cookie-list">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <div>加载中...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 代理池管理 -->
+            <div id="tab-proxies" class="tab-content">
+                <div class="card">
+                    <div class="card-title">🌐 IP代理池</div>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
+                        从快代理API获取代理IP，提升爬取成功率。代理将在爬取时随机使用。
+                    </p>
+
+                    <div style="background: var(--void); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                        <h4 style="margin-bottom: 12px;">📡 从API获取代理</h4>
+                        <form id="fetchProxyForm" style="display: flex; gap: 12px; align-items: flex-end;">
+                            <div style="flex: 1;">
+                                <label class="form-label">快代理API链接</label>
+                                <input type="text" class="form-input" id="proxyApiUrl" placeholder="https://dps.kdlapi.com/api/getdps/?secret_id=xxx&signature=xxx&num=100">
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="fetchProxyBtn">
+                                <span>📥</span> 获取代理
+                            </button>
+                        </form>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                        <button class="btn btn-secondary" onclick="loadProxies()">
+                            <span>🔄</span> 刷新列表
+                        </button>
+                        <button class="btn btn-danger" onclick="batchDeleteProxies()">
+                            <span>🗑️</span> 批量删除
+                        </button>
+                    </div>
+
+                    <div id="proxyList" class="proxy-list">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <div>加载中...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 用户管理 -->
+            <div id="tab-users" class="tab-content">
+                <div class="card">
+                    <div class="card-title">➕ 添加用户</div>
+                    <form id="addUserForm">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="form-group">
+                                <label class="form-label">用户名</label>
+                                <input type="text" class="form-input" id="newUsername" placeholder="用户名" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">邮箱</label>
+                                <input type="email" class="form-input" id="newEmail" placeholder="邮箱" required>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="form-group">
+                                <label class="form-label">密码</label>
+                                <input type="password" class="form-input" id="newPassword" placeholder="密码（至少6位）" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">角色</label>
+                                <select class="form-select" id="newRole">
+                                    <option value="user">普通用户</option>
+                                    <option value="admin">管理员</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <span>➕</span> 创建用户
+                        </button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">👥 用户列表</div>
+                    <div id="userList" class="loading">
+                        <div class="spinner"></div>
+                        <div>加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 编辑用户Modal -->
+    <div class="modal" id="editUserModal">
+        <div class="modal-content">
+            <div class="modal-title">编辑用户</div>
+            <form id="editUserForm">
+                <input type="hidden" id="editUserId">
+                <div class="form-group">
+                    <label class="form-label">用户名</label>
+                    <input type="text" class="form-input" id="editUsername" disabled>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">邮箱</label>
+                    <input type="email" class="form-input" id="editEmail" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">新密码（留空则不修改）</label>
+                    <input type="password" class="form-input" id="editPassword" placeholder="留空则保持原密码">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label class="form-label">角色</label>
+                        <select class="form-select" id="editRole">
+                            <option value="user">普通用户</option>
+                            <option value="admin">管理员</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">状态</label>
+                        <select class="form-select" id="editIsActive">
+                            <option value="1">启用</option>
+                            <option value="0">禁用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeEditModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Theme toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            const next = current === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            document.querySelector('.theme-toggle').textContent = next === 'light' ? '🌙' : '☀️';
+        }
+
+        // Initialize theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.querySelector('.theme-toggle').textContent = savedTheme === 'light' ? '🌙' : '☀️';
+
+        // Tab切换
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        function showMessage(msg, type) {
+            const el = document.getElementById('message');
+            el.textContent = msg;
+            el.className = 'message ' + type;
+            el.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 检查登录状态
+        let currentUserId = null;
+
+        async function checkLogin() {
+            try {
+                const resp = await fetch('/auth/me');
+                const data = await resp.json();
+
+                if (data.user) {
+                    currentUserId = data.user.id;
+                    document.getElementById('userInfo').style.display = 'flex';
+                    document.getElementById('userName').textContent = data.user.username;
+                    document.getElementById('userRole').textContent = data.user.role === 'admin' ? '管理员' : '用户';
+                    document.getElementById('logoutBtn').style.display = 'flex';
+                    document.getElementById('loginPrompt').style.display = 'none';
+                    document.getElementById('adminContent').style.display = 'block';
+
+                    // 只有管理员显示用户管理、Cookie和代理池 tabs
+                    if (data.user.role !== 'admin') {
+                        document.getElementById('tabUsers').style.display = 'none';
+                        document.getElementById('tabCookies').style.display = 'none';
+                        document.getElementById('tabProxies').style.display = 'none';
+                    }
+
+                    // 加载数据
+                    loadVideos();
+                    if (data.user.role === 'admin') {
+                        loadUsers();
+                        loadCookies();
+                        loadProxies();
+                    }
+                } else {
+                    document.getElementById('loginPrompt').style.display = 'block';
+                    document.getElementById('adminContent').style.display = 'none';
+                }
+            } catch (e) {
+                console.error('检查登录失败:', e);
+            }
+        }
+
+        // 退出登录
+        async function logout() {
+            try {
+                await fetch('/auth/logout', { method: 'POST' });
+                location.href = '/login';
+            } catch (e) {
+                console.error('退出失败:', e);
+            }
+        }
+
+        // 加载视频列表
+        async function loadVideos() {
+            try {
+                const resp = await fetch('/api/videos?page=1&page_size=100');
+                const data = await resp.json();
+                const container = document.getElementById('videoList');
+
+                if (!data.videos || data.videos.length === 0) {
+                    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">暂无视频数据</div>';
+                    return;
+                }
+
+                container.innerHTML = data.videos.map(v => `
+                    <div class="video-item">
+                        <img class="video-thumb" src="${v.cover || ''}" alt="" referrerpolicy="no-referrer">
+                        <div class="video-details">
+                            <div class="video-title">${v.title}</div>
+                            <div class="video-meta">
+                                <span>${v.platform === 'bilibili' ? 'B站' : '抖音'}</span>
+                                <span>热度: ${(v.heat_score || 0).toFixed(2)}</span>
+                                ${v.is_mine ? '<span style="background:var(--cyan-dim);color:var(--cyan);">我的</span>' : ''}
+                            </div>
+                            <div class="video-actions">
+                                <button class="btn btn-small btn-refresh" onclick="refreshVideo(${v.id})">🔄 刷新</button>
+                                ${v.is_mine || v.is_admin ? `<button class="btn btn-small btn-delete" onclick="deleteVideo(${v.id})">🗑️ 删除</button>` : ''}
+                                <button class="btn btn-small" onclick="location.href='/video/${v.id}'">📊 分析</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('加载失败:', e);
+            }
+        }
+
+        // 添加视频
+        document.getElementById('addForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('addBtn');
+            const url = document.getElementById('videoUrl').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-small"></span> 处理中...';
+
+            try {
+                const resp = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await resp.json();
+
+                if (data.error) {
+                    showMessage(data.error, 'error');
+                } else {
+                    showMessage('添加成功！', 'success');
+                    document.getElementById('videoUrl').value = '';
+                    setTimeout(() => location.href = `/video/${data.id}`, 1500);
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<span>➕</span> 添加并爬取数据';
+        });
+
+        // 刷新视频
+        async function refreshVideo(id) {
+            if (!confirm('确定要刷新该视频数据吗？')) return;
+            try {
+                const resp = await fetch(`/api/videos/${id}/refresh`, { method: 'POST' });
+                const data = await resp.json();
+                if (data.success) {
+                    alert('✅ 刷新成功！');
+                    loadVideos();
+                } else {
+                    alert('❌ ' + (data.error || '刷新失败'));
+                }
+            } catch (e) {
+                alert('❌ 请求失败: ' + e.message);
+            }
+        }
+
+        // 删除视频
+        async function deleteVideo(id) {
+            if (!confirm('确定要删除该视频吗？')) return;
+            try {
+                const resp = await fetch(`/api/videos/${id}`, { method: 'DELETE' });
+                if (resp.ok) {
+                    alert('✅ 删除成功！');
+                    loadVideos();
+                } else {
+                    const data = await resp.json();
+                    alert('❌ ' + (data.error || '删除失败'));
+                }
+            } catch (e) {
+                alert('❌ 请求失败: ' + e.message);
+            }
+        }
+
+        // 加载用户列表（仅管理员）
+        async function loadUsers() {
+            try {
+                const resp = await fetch('/admin/users');
+                const users = await resp.json();
+                const container = document.getElementById('userList');
+
+                if (!users.length) {
+                    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">暂无用户数据</div>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table class="user-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>用户名</th>
+                                <th>邮箱</th>
+                                <th>角色</th>
+                                <th>状态</th>
+                                <th>注册时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${users.map(u => `
+                                <tr>
+                                    <td>${u.id}</td>
+                                    <td>${u.username}</td>
+                                    <td>${u.email}</td>
+                                    <td><span class="role-badge ${u.role}">${u.role === 'admin' ? '管理员' : '用户'}</span></td>
+                                    <td><span class="status-badge ${u.is_active ? 'active' : 'inactive'}">${u.is_active ? '启用' : '禁用'}</span></td>
+                                    <td>${u.created_at ? u.created_at.split('T')[0] : '-'}</td>
+                                    <td>
+                                        <button class="btn btn-small btn-edit" onclick="editUser(${u.id}, '${u.username}', '${u.email}', '${u.role}', ${u.is_active})">✏️</button>
+                                        ${u.id !== currentUserId ? `<button class="btn btn-small btn-delete" onclick="deleteUser(${u.id})">🗑️</button>` : ''}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (e) {
+                console.error('加载用户失败:', e);
+            }
+        }
+
+        // 编辑用户
+        function editUser(id, username, email, role, isActive) {
+            document.getElementById('editUserId').value = id;
+            document.getElementById('editUsername').value = username;
+            document.getElementById('editEmail').value = email;
+            document.getElementById('editRole').value = role;
+            document.getElementById('editIsActive').value = isActive ? '1' : '0';
+            document.getElementById('editPassword').value = '';
+            document.getElementById('editUserModal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editUserModal').classList.remove('active');
+        }
+
+        document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editUserId').value;
+            const email = document.getElementById('editEmail').value;
+            const password = document.getElementById('editPassword').value;
+            const role = document.getElementById('editRole').value;
+            const is_active = document.getElementById('editIsActive').value === '1';
+
+            const data = { email, role, is_active };
+            if (password) data.password = password;
+
+            try {
+                const resp = await fetch(`/admin/users/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await resp.json();
+
+                if (result.success) {
+                    showMessage('更新成功', 'success');
+                    closeEditModal();
+                    loadUsers();
+                } else {
+                    showMessage(result.error, 'error');
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+            }
+        });
+
+        // 添加用户
+        document.getElementById('addUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('newUsername').value;
+            const email = document.getElementById('newEmail').value;
+            const password = document.getElementById('newPassword').value;
+            const role = document.getElementById('newRole').value;
+
+            try {
+                const resp = await fetch('/admin/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password, role })
+                });
+                const result = await resp.json();
+
+                if (result.success) {
+                    showMessage('创建成功', 'success');
+                    document.getElementById('addUserForm').reset();
+                    loadUsers();
+                } else {
+                    showMessage(result.error, 'error');
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+            }
+        });
+
+        // 删除用户
+        async function deleteUser(id) {
+            if (!confirm('确定要删除该用户吗？该操作不可恢复！')) return;
+            try {
+                const resp = await fetch(`/admin/users/${id}`, { method: 'DELETE' });
+                const result = await resp.json();
+                if (result.success) {
+                    showMessage('删除成功', 'success');
+                    loadUsers();
+                } else {
+                    showMessage(result.error, 'error');
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        // 加载Cookie列表
+        async function loadCookies() {
+            try {
+                const resp = await fetch('/admin/cookies');
+                let cookies = await resp.json();
+                const container = document.getElementById('cookieList');
+                const filterPlatform = document.getElementById('cookieFilterPlatform')?.value || '';
+
+                // 按平台筛选
+                if (filterPlatform) {
+                    cookies = cookies.filter(c => c.platform === filterPlatform);
+                }
+
+                document.getElementById('cookieCount').textContent = `共 ${cookies.length} 个`;
+
+                if (!cookies.length) {
+                    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">暂无配置的Cookie</div>';
+                    return;
+                }
+
+                // 按平台分组
+                const groups = {};
+                cookies.forEach(c => {
+                    if (!groups[c.platform]) groups[c.platform] = [];
+                    groups[c.platform].push(c);
+                });
+
+                const platformIcons = { bilibili: '🎬', douyin: '📱' };
+                const platformNames = { bilibili: 'B站', douyin: '抖音' };
+
+                let html = '';
+                for (const [platform, list] of Object.entries(groups)) {
+                    html += `<div class="cookie-group">
+                        <div class="cookie-group-title">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                <input type="checkbox" class="cookie-group-check" data-platform="${platform}" onchange="toggleGroupCookies('${platform}', this.checked)">
+                                ${platformIcons[platform] || '📦'} ${platformNames[platform] || platform} (${list.length})
+                            </label>
+                        </div>`;
+                    html += list.map(c => {
+                        const date = c.created_at ? new Date(c.created_at).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+                        return `
+                        <div class="cookie-item">
+                            <div class="cookie-header">
+                                <label style="display:flex;align-items:center;gap:8px;">
+                                    <input type="checkbox" class="cookie-check" value="${c.id}" data-platform="${platform}">
+                                    <span class="cookie-name">${c.name}</span>
+                                </label>
+                                <div style="display:flex;gap:4px;">
+                                    <button class="btn btn-tiny" onclick="renameCookie(${c.id}, '${c.name}')">✏️</button>
+                                    <button class="btn btn-tiny btn-delete" onclick="deleteCookie(${c.id})">🗑️</button>
+                                </div>
+                            </div>
+                            <div class="cookie-meta">
+                                <span class="cookie-date">📅 ${date}</span>
+                                <span class="cookie-preview">${c.cookie.substring(0, 60)}...</span>
+                            </div>
+                        </div>
+                    `}).join('');
+                    html += '</div>';
+                }
+
+                container.innerHTML = html;
+            } catch (e) {
+                console.error('加载Cookie失败:', e);
+            }
+        }
+
+        // 全选/取消全选平台组
+        function toggleGroupCookies(platform, checked) {
+            document.querySelectorAll(`.cookie-check[data-platform="${platform}"]`).forEach(cb => {
+                cb.checked = checked;
+            });
+        }
+
+        // 全选所有
+        function selectAllCookies() {
+            document.querySelectorAll('.cookie-check').forEach(cb => cb.checked = true);
+        }
+
+        // 批量删除Cookie
+        async function batchDeleteCookies() {
+            const checked = document.querySelectorAll('.cookie-check:checked');
+            if (!checked.length) {
+                showMessage('请选择要删除的Cookie', 'error');
+                return;
+            }
+            if (!confirm(`确定要删除 ${checked.length} 个Cookie吗？`)) return;
+            const ids = Array.from(checked).map(c => c.value);
+            try {
+                const resp = await fetch('/admin/cookies/batch-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showMessage(result.message, 'success');
+                    loadCookies();
+                } else {
+                    showMessage(result.error, 'error');
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        // 重命名Cookie
+        async function renameCookie(id, oldName) {
+            const newName = prompt('输入新的Cookie名称：', oldName);
+            if (!newName || newName === oldName) return;
+            try {
+                const resp = await fetch(`/admin/cookies/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showMessage('重命名成功', 'success');
+                    loadCookies();
+                } else {
+                    showMessage(result.error, 'error');
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        // 删除单个Cookie
+        async function deleteCookie(id) {
+            if (!confirm('确定要删除该Cookie吗？')) return;
+            try {
+                const resp = await fetch(`/admin/cookies/${id}`, { method: 'DELETE' });
+                const result = await resp.json();
+                if (result.success) {
+                    showMessage('删除成功', 'success');
+                    loadCookies();
+                } else {
+                    showMessage(result.error, 'error');
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        // 保存Cookie
+        document.getElementById('cookieForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const cookieInput = document.getElementById('cookieInput');
+            const platformSelect = document.getElementById('cookiePlatform');
+            const nameInput = document.getElementById('cookieName');
+            if (!cookieInput) return;
+            const cookie = cookieInput.value;
+            const platform = platformSelect?.value || 'bilibili';
+            const name = nameInput?.value || '';
+
+            if (!cookie) {
+                showMessage('Cookie不能为空', 'error');
+                return;
+            }
+
+            try {
+                const resp = await fetch('/admin/cookies', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ platform: platform, name: name, cookie: cookie })
+                });
+                const result = await resp.json();
+
+                if (result.success) {
+                    showMessage(result.message || '保存成功', 'success');
+                    cookieInput.value = '';
+                    if (nameInput) nameInput.value = '';
+                    loadCookies();
+                } else {
+                    showMessage(result.error, 'error');
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+            }
+        });
+
+        // 测试Cookie
+        async function testCookie() {
+            const testUrl = document.getElementById('cookieTestUrl')?.value;
+            const cookie = document.getElementById('cookieInput')?.value;
+            if (!testUrl) {
+                showMessage('请输入要测试的B站视频链接', 'error');
+                return;
+            }
+            if (!cookie) {
+                showMessage('请先输入Cookie', 'error');
+                return;
+            }
+            try {
+                const resp = await fetch('/admin/cookies/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: testUrl, cookie: cookie })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showMessage('Cookie有效！视频: ' + result.data.title, 'success');
+                } else {
+                    showMessage('Cookie无效: ' + result.error, 'error');
+                }
+            } catch (e) {
+                showMessage('测试失败: ' + e.message, 'error');
+            }
+        }
+
+        // 加载代理列表
+        async function loadProxies() {
+            try {
+                const resp = await fetch('/admin/proxies');
+                const proxies = await resp.json();
+                const container = document.getElementById('proxyList');
+
+                if (!proxies.length) {
+                    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">暂无代理，请从API获取</div>';
+                    return;
+                }
+
+                container.innerHTML = proxies.map(p => `
+                    <div class="proxy-item" data-id="${p.id}">
+                        <div class="proxy-info">
+                            <label style="display:flex;align-items:center;gap:8px;">
+                                <input type="checkbox" class="proxy-checkbox" value="${p.id}">
+                                <span class="proxy-status ${p.is_active ? 'active' : 'inactive'}"></span>
+                                <span class="proxy-addr">${p.ip}:${p.port}</span>
+                                <span class="proxy-protocol">${p.protocol}</span>
+                            </label>
+                        </div>
+                        <div class="proxy-stats">
+                            <span class="stat-item success">✓ ${p.success_count}</span>
+                            <span class="stat-item fail">✗ ${p.fail_count}</span>
+                        </div>
+                        <div class="proxy-actions">
+                            <button class="btn btn-small" onclick="testProxy(${p.id})">测试</button>
+                            <button class="btn btn-small btn-delete" onclick="deleteProxy(${p.id})">删除</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('加载代理失败:', e);
+            }
+        }
+
+        // 从API获取代理
+        document.getElementById('fetchProxyForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const apiUrl = document.getElementById('proxyApiUrl').value;
+            if (!apiUrl) {
+                showMessage('请输入API链接', 'error');
+                return;
+            }
+            const btn = document.getElementById('fetchProxyBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-small"></span> 获取中...';
+            try {
+                const resp = await fetch('/admin/proxies/fetch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_url: apiUrl })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showMessage(result.message, 'success');
+                    loadProxies();
+                } else {
+                    showMessage(result.error, 'error');
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>📥</span> 获取代理';
+            }
+        });
+
+        // 测试单个代理
+        async function testProxy(id) {
+            const testUrl = prompt('输入测试URL（默认https://www.bilibili.com）:', 'https://www.bilibili.com');
+            if (!testUrl) return;
+            try {
+                const resp = await fetch(`/admin/proxies/${id}/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ test_url: testUrl })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showMessage('代理可用！', 'success');
+                } else {
+                    showMessage('代理不可用: ' + result.error, 'error');
+                }
+                loadProxies();
+            } catch (e) {
+                showMessage('测试失败: ' + e.message, 'error');
+            }
+        }
+
+        // 删除单个代理
+        async function deleteProxy(id) {
+            if (!confirm('确定要删除该代理吗？')) return;
+            try {
+                const resp = await fetch(`/admin/proxies/${id}`, { method: 'DELETE' });
+                const result = await resp.json();
+                if (result.success) {
+                    showMessage('删除成功', 'success');
+                    loadProxies();
+                } else {
+                    showMessage(result.error, 'error');
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        // 批量删除代理
+        async function batchDeleteProxies() {
+            const checked = document.querySelectorAll('.proxy-checkbox:checked');
+            if (!checked.length) {
+                showMessage('请选择要删除的代理', 'error');
+                return;
+            }
+            if (!confirm(`确定要删除 ${checked.length} 个代理吗？`)) return;
+            const ids = Array.from(checked).map(c => c.value);
+            try {
+                const resp = await fetch('/admin/proxies/batch-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: ids })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showMessage(result.message, 'success');
+                    loadProxies();
+                } else {
+                    showMessage(result.error, 'error');
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        // 初始化
+        checkLogin();
+    </script>
+</body>
+</html>

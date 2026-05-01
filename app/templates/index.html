@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>多源视频热度分析系统</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #0b1020;
+      color: #e6eefc;
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #1a2447 0%, #121a33 100%);
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,.3);
+    }
+    .header h1 {
+      font-size: 24px;
+      background: linear-gradient(90deg, #00d4ff, #7b2dff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header .nav a {
+      color: #e6eefc;
+      text-decoration: none;
+      margin-left: 30px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: background 0.3s;
+    }
+    .header .nav a:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px 40px;
+    }
+    .filter-bar {
+      background: #121a33;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    .filter-bar label {
+      font-size: 14px;
+      opacity: 0.8;
+    }
+    .filter-bar select {
+      background: #1a2447;
+      border: 1px solid #2a3557;
+      color: #e6eefc;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .video-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .video-card {
+      background: #121a33;
+      border-radius: 14px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .video-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(0,0,0,.4);
+    }
+    .video-card .cover {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+    }
+    .video-card .info {
+      padding: 16px;
+    }
+    .video-card .platform {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+    .platform.bilibili { background: #00a1d6; }
+    .platform.douyin { background: #000; color: #fff; }
+    .video-card .title {
+      font-size: 15px;
+      line-height: 1.4;
+      margin-bottom: 10px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .video-card .meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      opacity: 0.7;
+    }
+    .video-card .heat {
+      color: #ff6b6b;
+      font-weight: bold;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      opacity: 0.6;
+    }
+    .empty-state h2 {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #7b2dff, #00d4ff);
+      border: none;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>多源视频热度分析系统</h1>
+    <div class="nav">
+      <a href="/">排行榜</a>
+      <a href="/analyze">分析视频</a>
+      <a href="/admin">管理</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="filter-bar">
+      <div>
+        <label>平台：</label>
+        <select id="platform">
+          <option value="">全部</option>
+          <option value="bilibili">B站</option>
+          <option value="douyin">抖音</option>
+        </select>
+      </div>
+      <div>
+        <label>排序：</label>
+        <select id="orderBy">
+          <option value="heat_score">热度排序</option>
+          <option value="created_at">最新添加</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="video-list" id="videoList">
+      <div class="empty-state">
+        <h2>暂无数据</h2>
+        <p>点击下方按钮添加视频进行分析</p>
+        <a href="/analyze" class="btn-primary">分析视频</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api';
+    let currentPlatform = '';
+    let currentOrderBy = 'heat_score';
+
+    async function loadVideos() {
+      const params = new URLSearchParams();
+      if (currentPlatform) params.set('platform', currentPlatform);
+      params.set('order_by', currentOrderBy);
+
+      try {
+        const res = await fetch(`${API_BASE}/videos?${params}`);
+        const data = await res.json();
+
+        const list = document.getElementById('videoList');
+        if (!data.videos || data.videos.length === 0) {
+          list.innerHTML = `
+            <div class="empty-state">
+              <h2>暂无数据</h2>
+              <p>点击下方按钮添加视频进行分析</p>
+              <a href="/analyze" class="btn-primary">分析视频</a>
+            </div>
+          `;
+          return;
+        }
+
+        list.innerHTML = data.videos.map(v => `
+          <div class="video-card" onclick="location.href='/video/${v.id}'">
+            <img class="cover" src="${v.cover || '/static/placeholder.png'}" alt="${v.title}">
+            <div class="info">
+              <span class="platform ${v.platform}">${v.platform === 'bilibili' ? 'B站' : '抖音'}</span>
+              <div class="title">${v.title || '无标题'}</div>
+              <div class="meta">
+                <span>${v.author || '未知作者'}</span>
+                <span class="heat">热度: ${(v.heat_score || 0).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('加载失败:', err);
+      }
+    }
+
+    document.getElementById('platform').addEventListener('change', e => {
+      currentPlatform = e.target.value;
+      loadVideos();
+    });
+
+    document.getElementById('orderBy').addEventListener('change', e => {
+      currentOrderBy = e.target.value;
+      loadVideos();
+    });
+
+    loadVideos();
+  </script>
+</body>
+</html>

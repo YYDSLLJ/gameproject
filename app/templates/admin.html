@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>管理后台 - 多源热度分析</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #0b1020;
+      color: #e6eefc;
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #1a2447 0%, #121a33 100%);
+      padding: 16px 40px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.3);
+    }
+    .header a {
+      color: #e6eefc;
+      text-decoration: none;
+      opacity: 0.8;
+    }
+    .header h1 {
+      font-size: 18px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+    .section {
+      background: #121a33;
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .section h2 {
+      font-size: 16px;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #1a2447;
+    }
+    .btn {
+      padding: 10px 20px;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #2a3557;
+      color: #e6eefc;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background: #3a4567;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #7b2dff, #00d4ff);
+    }
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .log {
+      background: #0b1020;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      color: #aaa;
+    }
+    .video-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 12px;
+    }
+    .video-item {
+      background: #1a2447;
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      gap: 12px;
+    }
+    .video-item img {
+      width: 80px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    .video-item .info {
+      flex: 1;
+      font-size: 12px;
+    }
+    .video-item .title {
+      font-size: 13px;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .video-item .meta {
+      opacity: 0.6;
+    }
+    .loading {
+      color: #00d4ff;
+      padding: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="/">← 返回</a>
+    <h1>管理后台</h1>
+  </div>
+
+  <div class="container">
+    <!-- 爬虫控制 -->
+    <div class="section">
+      <h2>爬虫控制</h2>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="crawlBilibiliHot()">爬取B站热门</button>
+        <button class="btn" onclick="crawlVideoFull()">爬取视频完整数据</button>
+        <button class="btn" onclick="calcStats()">重新计算热度</button>
+      </div>
+      <div id="spiderLog" class="log" style="margin-top:16px;">等待操作...</div>
+    </div>
+
+    <!-- 视频列表 -->
+    <div class="section">
+      <h2>视频列表</h2>
+      <button class="btn" onclick="loadVideos()" style="margin-bottom:12px;">刷新</button>
+      <div id="videoList" class="video-list">
+        <div class="loading">加载中...</div>
+      </div>
+    </div>
+
+    <!-- 操作日志 -->
+    <div class="section">
+      <h2>操作日志</h2>
+      <div id="opLog" class="log">-</div>
+    </div>
+  </div>
+
+  <script>
+    function log(msg, logId = 'spiderLog') {
+      const el = document.getElementById(logId);
+      const time = new Date().toLocaleTimeString();
+      el.textContent = `[${time}] ${msg}\n` + el.textContent;
+    }
+
+    async function crawlBilibiliHot() {
+      log('开始爬取B站热门...');
+      try {
+        const resp = await fetch('/admin/spider/bilibili/hot', {method:'POST'});
+        const data = await resp.json();
+        log(`完成: ${JSON.stringify(data.results)}`);
+      } catch (e) {
+        log(`失败: ${e.message}`);
+      }
+    }
+
+    async function crawlVideoFull() {
+      const id = prompt('请输入视频ID:');
+      if (!id) return;
+      log(`开始爬取视频 ${id} 的完整数据...`);
+      try {
+        const resp = await fetch(`/admin/spider/video/${id}/full`, {method:'POST'});
+        const data = await resp.json();
+        log(`完成: 评论${data.comments}条, 弹幕${data.danmaku}条`);
+        if (data.errors.length) log(`错误: ${data.errors.join(', ')}`);
+      } catch (e) {
+        log(`失败: ${e.message}`);
+      }
+    }
+
+    async function calcStats() {
+      log('开始计算热度...');
+      try {
+        const resp = await fetch('/admin/stats/calc', {method:'POST'});
+        const data = await resp.json();
+        log(`完成: 更新了 ${data.results.length} 个视频`);
+      } catch (e) {
+        log(`失败: ${e.message}`);
+      }
+    }
+
+    async function loadVideos() {
+      const el = document.getElementById('videoList');
+      el.innerHTML = '<div class="loading">加载中...</div>';
+      try {
+        const resp = await fetch('/admin/videos');
+        const data = await resp.json();
+        if (data.length === 0) {
+          el.innerHTML = '<div class="loading">暂无视频</div>';
+          return;
+        }
+        el.innerHTML = data.map(v => `
+          <div class="video-item">
+            <img src="${v.cover || ''}" alt="">
+            <div class="info">
+              <div class="title">${v.title || '无标题'}</div>
+              <div class="meta">${v.platform === 'bilibili' ? 'B站' : '抖音'} | ${v.author || '-'}</div>
+              <div class="meta">ID: ${v.id}</div>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        el.innerHTML = `<div class="loading">加载失败: ${e.message}</div>`;
+      }
+    }
+
+    loadVideos();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ video.title }} - 数据驾驶舱</title>
+    <script src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --void: #0d0f14;
+            --surface: #151820;
+            --card: #1c2030;
+            --card-hover: #242840;
+            --border: rgba(255, 255, 255, 0.07);
+            --border-active: rgba(255, 255, 255, 0.14);
+            --cyan: #00d4ff;
+            --cyan-dim: rgba(0, 212, 255, 0.1);
+            --magenta: #ff3d9a;
+            --magenta-dim: rgba(255, 61, 154, 0.1);
+            --gold: #ffc107;
+            --green: #00e676;
+            --red: #ff5252;
+            --text: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --text-muted: rgba(255, 255, 255, 0.35);
+            --shadow: rgba(0, 0, 0, 0.35);
+            --gradient-primary: linear-gradient(135deg, #00d4ff 0%, #ff3d9a 100%);
+        }
+
+        [data-theme="light"] {
+            --void: #f0f2f7;
+            --surface: #ffffff;
+            --card: #ffffff;
+            --card-hover: #f5f7fb;
+            --border: rgba(0, 0, 0, 0.06);
+            --border-active: rgba(0, 0, 0, 0.12);
+            --cyan: #0088cc;
+            --cyan-dim: rgba(0, 136, 204, 0.08);
+            --magenta: #e91e63;
+            --magenta-dim: rgba(233, 30, 99, 0.08);
+            --gold: #f5a623;
+            --green: #00c853;
+            --red: #f44336;
+            --text: #1a1a2e;
+            --text-secondary: rgba(26, 26, 46, 0.6);
+            --text-muted: rgba(26, 26, 46, 0.35);
+            --shadow: rgba(0, 0, 0, 0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, sans-serif;
+            background: var(--void);
+            color: var(--text);
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        #app {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 20px 28px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-left { display: flex; align-items: center; gap: 14px; }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 7px 12px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: var(--card-hover);
+            border-color: var(--border-active);
+            color: var(--text);
+        }
+
+        .header-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .theme-toggle {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 15px;
+        }
+
+        .theme-toggle:hover {
+            background: var(--card-hover);
+            border-color: var(--border-active);
+            transform: scale(1.05);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 20px;
+        }
+
+        .sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            border-color: var(--border-active);
+            box-shadow: 0 6px 24px var(--shadow);
+        }
+
+        .cover-wrap {
+            position: relative;
+            aspect-ratio: 16/9;
+            background: var(--surface);
+        }
+
+        .cover { width: 100%; height: 100%; object-fit: cover; }
+
+        .cover-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--cyan-dim), var(--magenta-dim));
+            color: var(--text-muted);
+            font-size: 11px;
+            gap: 6px;
+        }
+
+        .cover-placeholder .icon { font-size: 24px; opacity: 0.4; }
+
+        .info { padding: 14px; }
+
+        .title {
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.4;
+            margin-bottom: 10px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .author {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 8px;
+        }
+
+        .author-face {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .author-name { font-size: 11px; color: var(--cyan); font-weight: 500; }
+
+        .platform-badge {
+            margin-left: auto;
+            padding: 2px 7px;
+            background: var(--cyan-dim);
+            border-radius: 20px;
+            font-size: 8px;
+            font-weight: 600;
+            color: var(--cyan);
+            letter-spacing: 0.5px;
+        }
+
+        .video-link {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--cyan);
+            font-size: 9px;
+            text-decoration: none;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+            overflow: hidden;
+        }
+
+        .video-link:hover { background: var(--cyan-dim); border-color: var(--cyan); }
+        .video-link .link-icon { flex-shrink: 0; }
+        .video-link .link-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 0 14px 14px;
+        }
+
+        .stat-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 8px;
+            text-align: center;
+        }
+
+        .stat-box .value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .stat-box .label {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-box:nth-child(1) .value { color: var(--cyan); }
+        .stat-box:nth-child(2) .value { color: var(--red); }
+        .stat-box:nth-child(3) .value { color: var(--gold); }
+        .stat-box:nth-child(4) .value { color: var(--green); }
+
+        .heat-card {
+            margin: 0 14px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .heat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gradient-primary);
+        }
+
+        .heat-card .heat-label {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .heat-card .heat-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 32px;
+            font-weight: 800;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+        }
+
+        .heat-card .heat-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .heat-card .heat-main {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .heat-card .heat-label {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .heat-card .heat-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 28px;
+            font-weight: 800;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+        }
+
+        .heat-card .heat-peak {
+            text-align: right;
+        }
+
+        .heat-card .peak-label {
+            font-size: 8px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .heat-card .peak-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--gold);
+        }
+
+        .heat-card .peak-day {
+            font-size: 9px;
+            color: var(--text-secondary);
+        }
+
+        .heat-card .heat-bar {
+            margin-top: 10px;
+            height: 4px;
+            background: var(--card);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .heat-card .heat-bar-fill {
+            height: 100%;
+            background: var(--gradient-primary);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        .heat-card .heat-percent {
+            font-size: 9px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .refresh-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: calc(100% - 28px);
+            margin: 0 14px 8px;
+            padding: 10px;
+            background: var(--gradient-primary);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+
+        .refresh-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px var(--cyan-glow);
+        }
+
+        .refresh-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        .force-crawl-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: calc(100% - 28px);
+            margin: 0 14px 14px;
+            padding: 8px;
+            background: var(--card);
+            border: 1px solid var(--magenta);
+            border-radius: 8px;
+            color: var(--magenta);
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+
+        .force-crawl-btn:hover:not(:disabled) {
+            background: var(--magenta-dim);
+            transform: translateY(-1px);
+        }
+
+        .force-crawl-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        .spinner-small {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 筛选指示器 */
+        .filter-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: var(--magenta-dim);
+            border: 1px solid var(--magenta);
+            border-radius: 8px;
+            margin: 0 14px 14px;
+            font-size: 11px;
+            color: var(--magenta);
+        }
+
+        .filter-indicator .clear-btn {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: var(--magenta);
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* 主内容区 */
+        .main-content { display: flex; flex-direction: column; gap: 16px; }
+
+        .chart-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            transition: all 0.3s;
+        }
+
+        .chart-card:hover { border-color: var(--border-active); box-shadow: 0 6px 24px var(--shadow); }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .chart-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .chart-title::before {
+            content: '';
+            width: 2.5px;
+            height: 11px;
+            background: var(--gradient-primary);
+            border-radius: 2px;
+        }
+
+        .chart-subtitle { font-size: 9px; color: var(--text-muted); }
+
+        .chart-container { height: 160px; }
+        .chart-container.tall { height: 220px; }
+        .chart-container.short { height: 120px; }
+
+        .map-section { position: relative; }
+
+        .map-container {
+            height: 280px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: var(--surface);
+        }
+
+        .map-message {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--magenta-dim);
+            border: 1px solid var(--magenta);
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 11px;
+            color: var(--magenta);
+            z-index: 10;
+            white-space: nowrap;
+        }
+
+        #mapChart { width: 100%; height: 100%; }
+
+        .float-rank {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            min-width: 130px;
+            max-height: 180px;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+
+        .float-rank.collapsed { max-height: 45px; overflow: hidden; }
+
+        .rank-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .rank-title { font-size: 8px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .rank-toggle {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--cyan-dim);
+            border: none;
+            border-radius: 4px;
+            color: var(--cyan);
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .rank-toggle:hover { background: var(--cyan); color: var(--void); }
+
+        .rank-list { display: flex; flex-direction: column; gap: 2px; }
+
+        .rank-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 3px 5px;
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .rank-item:hover { background: var(--cyan-dim); }
+        .rank-item.active { background: var(--magenta-dim); border: 1px solid var(--magenta); }
+
+        .rank-item .name { color: var(--text-secondary); display: flex; align-items: center; gap: 4px; }
+        .rank-item .value { font-family: 'Outfit', sans-serif; color: var(--cyan); font-weight: 600; }
+        .rank-item:first-child .name { color: var(--gold); }
+        .rank-item:first-child .value { color: var(--gold); }
+
+        .rank-item .num {
+            width: 12px;
+            height: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 7px;
+            color: var(--text-muted);
+        }
+
+        .rank-item:first-child .num { background: var(--gold); color: #000; }
+
+        .foreign-section { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+
+        .foreign-title { font-size: 8px; color: var(--magenta); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+
+        .foreign-item { display: flex; justify-content: space-between; font-size: 9px; }
+        .foreign-item .name { color: var(--text-secondary); }
+        .foreign-item .value { color: var(--magenta); font-family: 'Outfit', sans-serif; }
+        .foreign-item:hover { background: var(--magenta-dim); cursor: pointer; }
+
+        .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        .rings-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+        .ring-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+
+        .ring-chart { width: 80px; height: 80px; }
+
+        .ring-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .ring-unit {
+            font-size: 8px;
+            color: var(--text-muted);
+            margin-top: -4px;
+        }
+
+        .sentiment-note {
+            margin-top: 12px;
+            padding: 10px;
+            background: var(--surface);
+            border-radius: 8px;
+            font-size: 9px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .sentiment-note strong { color: var(--text-secondary); }
+
+        .level-bar-container { height: 80px; margin-top: 8px; }
+
+        .danmaku-density { height: 120px; }
+
+        .hotspots-scroll {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding: 4px 0;
+            scrollbar-width: thin;
+            scrollbar-color: var(--cyan-dim) transparent;
+        }
+
+        .hotspot-card {
+            flex-shrink: 0;
+            width: 180px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            transition: all 0.25s;
+        }
+
+        .hotspot-card:hover { border-color: var(--cyan); transform: translateY(-2px); box-shadow: 0 4px 16px var(--cyan-dim); }
+
+        .hotspot-header { margin-bottom: 8px; }
+
+        .hotspot-time {
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--cyan);
+            margin-bottom: 2px;
+        }
+
+        .hotspot-count { font-size: 9px; color: var(--text-muted); }
+
+        .hotspot-bar {
+            height: 3px;
+            background: var(--card);
+            border-radius: 2px;
+            overflow: hidden;
+            display: flex;
+            margin-bottom: 8px;
+        }
+
+        .bar-pos { background: var(--green); }
+        .bar-neu { background: var(--text-muted); }
+        .bar-neg { background: var(--red); }
+
+        .hotspot-keywords { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 8px; }
+
+        .hotspot-tag { font-size: 8px; padding: 2px 6px; background: var(--cyan-dim); color: var(--cyan); border-radius: 6px; }
+
+        .hotspot-comment {
+            padding: 8px;
+            background: var(--card);
+            border-radius: 6px;
+            border-left: 2px solid var(--magenta);
+        }
+
+        .hotspot-comment .label {
+            font-size: 7px;
+            color: var(--magenta);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .hotspot-comment .content {
+            font-size: 9px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+
+        .hotspot-comment .meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 8px;
+            color: var(--text-muted);
+        }
+
+        .hotspot-comment .user { color: var(--cyan); }
+
+        .hot-comments-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .hot-comment-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+
+        .hot-comment-item:hover {
+            border-color: var(--cyan);
+            background: var(--card-hover);
+        }
+
+        .comment-rank {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--card);
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .comment-rank.top1 {
+            background: linear-gradient(135deg, var(--gold), #ff9800);
+            color: #000;
+            font-size: 16px;
+        }
+
+        .comment-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .comment-content {
+            font-size: 13px;
+            color: var(--text);
+            line-height: 1.5;
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+
+        .comment-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .comment-user {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--cyan);
+        }
+
+        .user-icon { font-size: 10px; }
+
+        .comment-level {
+            padding: 2px 6px;
+            background: var(--cyan-dim);
+            border-radius: 4px;
+            color: var(--cyan);
+        }
+
+        .comment-sentiment {
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .sent-pos {
+            background: rgba(0, 230, 118, 0.15);
+            color: var(--green);
+        }
+
+        .sent-neg {
+            background: rgba(255, 82, 82, 0.15);
+            color: var(--red);
+        }
+
+        .sent-neu {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+        }
+
+        .sentiment-examples {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .sentiment-example {
+            padding: 10px;
+            background: var(--surface);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .sentiment-example.positive { border-color: var(--green); }
+        .sentiment-example.neutral { border-color: #888; }
+        .sentiment-example.negative { border-color: var(--red); }
+
+        .sentiment-example .ex-label {
+            font-size: 7px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .sentiment-example.positive .ex-label { color: var(--green); }
+        .sentiment-example.neutral .ex-label { color: #888; }
+        .sentiment-example.negative .ex-label { color: var(--red); }
+
+        .sentiment-example .ex-text {
+            font-size: 9px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 60vh;
+            gap: 14px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-text { font-size: 12px; color: var(--text-muted); }
+
+        @media (max-width: 1100px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .sidebar { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+            .video-card { grid-column: span 2; }
+        }
+
+        @media (max-width: 768px) {
+            #app { padding: 14px; }
+            .sidebar { grid-template-columns: 1fr; }
+            .video-card { grid-column: span 1; }
+            .charts-row { grid-template-columns: 1fr; }
+            .rings-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        {% raw %}
+        <div v-if="loading" class="loading">
+            <div class="spinner"></div>
+            <span class="loading-text">加载中...</span>
+        </div>
+
+        <template v-else>
+            <header class="header">
+                <div class="header-left">
+                    <a href="/" class="back-btn"><span>←</span><span>返回</span></a>
+                    <h1 class="header-title">数据分析驾驶舱</h1>
+                </div>
+                <button class="theme-toggle" @click="toggleTheme">{{ theme === 'dark' ? '☀️' : '🌙' }}</button>
+            </header>
+
+            <div class="main-grid">
+                <aside class="sidebar">
+                    <div class="card video-card">
+                        <div class="cover-wrap">
+                            <img v-if="video.cover" :src="video.cover" class="cover" referrerpolicy="no-referrer" :alt="video.title">
+                            <div v-else class="cover-placeholder"><span class="icon">🎬</span><span>暂无封面</span></div>
+                        </div>
+                        <div class="info">
+                            <h2 class="title">{{ video.title }}</h2>
+                            <div class="author">
+                                <div class="author-face">{{ (video.author || 'U')[0] }}</div>
+                                <span class="author-name">{{ video.author }}</span>
+                                <span class="platform-badge">{{ video.platform === 'bilibili' ? 'B站' : '抖音' }}</span>
+                            </div>
+                            <a :href="video.url" target="_blank" class="video-link">
+                                <span class="link-icon">🔗</span>
+                                <span class="link-text">{{ video.url || '暂无链接' }}</span>
+                            </a>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="value">{{ fmt(stats.view_count) }}</div>
+                                <div class="label">播放</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="value">{{ fmt(stats.like_count) }}</div>
+                                <div class="label">点赞</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="value">{{ fmt(stats.coin_count) }}</div>
+                                <div class="label">投币</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="value">{{ fmt(stats.collect_count) }}</div>
+                                <div class="label">收藏</div>
+                            </div>
+                        </div>
+                        <div class="heat-card">
+                            <div class="heat-row">
+                                <div class="heat-main">
+                                    <div class="heat-label">综合热度</div>
+                                    <div class="heat-value">{{ heatTrend.current || 0 }}</div>
+                                </div>
+                                <div class="heat-peak">
+                                    <div class="peak-label">巅峰</div>
+                                    <div class="peak-value">{{ heatTrend.peak || 0 }}</div>
+                                    <div class="peak-day" v-if="heatTrend.peak_day">
+                                        Day{{ heatTrend.peak_day }}
+                                        <span v-if="heatTrend.estimated" style="color: var(--gold)">估</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="heat-bar">
+                                <div class="heat-bar-fill" :style="{ width: heatPercent + '%' }"></div>
+                            </div>
+                            <div class="heat-percent">{{ heatPercent }}%</div>
+                        </div>
+
+                        <div v-if="selectedRegion" class="filter-indicator">
+                            <span>📍 筛选: {{ selectedRegion }}</span>
+                            <button class="clear-btn" @click="clearFilter">✕</button>
+                        </div>
+
+                        <button class="refresh-btn" v-if="isMine || isAdmin" @click="refreshData" :disabled="refreshing">
+                            <span v-if="!refreshing">🔄</span>
+                            <span v-else class="spinner-small"></span>
+                            <span>{{ refreshing ? '更新中...' : '更新数据' }}</span>
+                        </button>
+                        <button class="force-crawl-btn" v-if="isMine || isAdmin" @click="forceCrawlData" :disabled="refreshing">
+                            <span v-if="!refreshing">🔁</span>
+                            <span v-else class="spinner-small"></span>
+                            <span>{{ refreshing ? '爬取中...' : '强制爬取' }}</span>
+                        </button>
+                    </div>
+                </aside>
+
+                <main class="main-content">
+                    <!-- 大地图 -->
+                    <div class="chart-card map-section">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title">评论IP分布</div>
+                                <div class="chart-subtitle">地域热度热力图 · 点击省份可筛选数据</div>
+                            </div>
+                        </div>
+                        <div class="map-container">
+                            <div id="mapChart" @click="onMapClick"></div>
+                            <div v-if="region.message" class="map-message">{{ region.message }}</div>
+                            <div class="float-rank" ref="rankPanelRef">
+                                <div class="rank-header">
+                                    <span class="rank-title">省份 TOP</span>
+                                    <button class="rank-toggle" @click="toggleRank">{{ rankToggleText }}</button>
+                                </div>
+                                <div class="rank-list">
+                                    <div v-for="(p, i) in topProvinces" :key="p.name"
+                                         class="rank-item"
+                                         :class="{ active: selectedRegion === p.name }"
+                                         @click="selectRegion(p.name)">
+                                        <span class="name"><span class="num">{{ i + 1 }}</span>{{ p.name }}</span>
+                                        <span class="value">{{ p.value }}</span>
+                                    </div>
+                                </div>
+                                <div v-if="(region.foreign || []).length > 0" class="foreign-section">
+                                    <div class="foreign-title">🌍 海外</div>
+                                    <div v-for="f in (region.foreign || [])" :key="f.name"
+                                         class="foreign-item"
+                                         :class="{ active: selectedRegion === f.name }"
+                                         @click="selectRegion(f.name)">
+                                        <span class="name">{{ f.name }}</span>
+                                        <span class="value">{{ f.value }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 热度趋势 -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title">热度趋势</div>
+                                <div class="chart-subtitle">
+                                    综合热度随时间变化
+                                    <span v-if="heatTrend.estimated" style="color: var(--gold)">（估算）</span>
+                                    <span v-else style="color: var(--green)">（真实）</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chart-container" ref="heatTrendRef"></div>
+                    </div>
+
+                    <!-- 色环 + 等级 -->
+                    <div class="charts-row">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title">互动与内容</div>
+                                    <div class="chart-subtitle">四色互动 / 三色内容分布</div>
+                                </div>
+                            </div>
+                            <div class="rings-grid">
+                                <div class="ring-item">
+                                    <div class="ring-chart" ref="quadChartRef"></div>
+                                    <div class="ring-label">互动</div>
+                                </div>
+                                <div class="ring-item">
+                                    <div class="ring-chart" ref="triChartRef"></div>
+                                    <div class="ring-label">内容</div>
+                                    <div class="ring-unit">{{ (summary.tri.播放量 || 0) >= 10000 ? '播放: 万' : '播放' }}</div>
+                                </div>
+                                <div class="ring-item">
+                                    <div class="ring-chart" ref="commentSentimentRef"></div>
+                                    <div class="ring-label">评论情感</div>
+                                </div>
+                                <div class="ring-item">
+                                    <div class="ring-chart" ref="danmakuSentimentRef"></div>
+                                    <div class="ring-label">弹幕情感</div>
+                                </div>
+                            </div>
+                            <div class="sentiment-note">
+                                <strong>情感评分标准：</strong>基于 SnowNLP 语义分析，<span style="color: var(--green)">正面</span> > 0.6、
+                                <span style="color: var(--text-muted)">中性</span> 0.4-0.6、<span style="color: var(--red)">负面</span> < 0.4
+                            </div>
+                            <div class="sentiment-examples" v-if="sentimentExamples">
+                                <div class="sentiment-example positive" v-if="sentimentExamples.正面">
+                                    <div class="ex-label">✓ 正面示例</div>
+                                    <div class="ex-text">{{ sentimentExamples.正面 }}</div>
+                                </div>
+                                <div class="sentiment-example neutral" v-if="sentimentExamples.中性">
+                                    <div class="ex-label">— 中性示例</div>
+                                    <div class="ex-text">{{ sentimentExamples.中性 }}</div>
+                                </div>
+                                <div class="sentiment-example negative" v-if="sentimentExamples.负面">
+                                    <div class="ex-label">✕ 负面示例</div>
+                                    <div class="ex-text">{{ sentimentExamples.负面 }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title">用户画像</div>
+                                    <div class="chart-subtitle">用户等级 / 性别分布</div>
+                                </div>
+                            </div>
+                            <div class="level-bar-container" ref="levelChartRef"></div>
+                            <div class="chart-container short" ref="genderChartRef"></div>
+                        </div>
+                    </div>
+
+                    <!-- 弹幕密度 + 发布时间 -->
+                    <div class="charts-row">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title">弹幕时间分布</div>
+                                    <div class="chart-subtitle">弹幕在视频内出现的时间密度</div>
+                                </div>
+                            </div>
+                            <div class="danmaku-density" ref="invideoRef"></div>
+                        </div>
+
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title">发布时间分布</div>
+                                    <div class="chart-subtitle">评论与弹幕发布时间趋势</div>
+                                </div>
+                            </div>
+                            <div class="danmaku-density" ref="timelineRef"></div>
+                        </div>
+                    </div>
+
+                    <!-- 热点时段 -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title">弹幕热点时段</div>
+                                <div class="chart-subtitle">高密度弹幕时间区域</div>
+                            </div>
+                        </div>
+                        <div class="hotspots-scroll">
+                            <div v-for="seg in (segments || [])" :key="seg.time_start" class="hotspot-card">
+                                <div class="hotspot-header">
+                                    <div class="hotspot-time">{{ seg.time_start_str }}</div>
+                                    <div class="hotspot-count">{{ seg.count }} 条弹幕</div>
+                                </div>
+                                <div class="hotspot-bar">
+                                    <div class="bar-pos" :style="{ width: getSentimentWidth(seg, 'pos') }"></div>
+                                    <div class="bar-neu" :style="{ width: getSentimentWidth(seg, 'neu') }"></div>
+                                    <div class="bar-neg" :style="{ width: getSentimentWidth(seg, 'neg') }"></div>
+                                </div>
+                                <div class="hotspot-keywords">
+                                    <span v-for="kw in (seg.keywords || []).slice(0, 2)" :key="kw" class="hotspot-tag">{{ kw }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 热门评论 -->
+                    <div class="chart-card" v-if="hotComments.length > 0">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title">热门评论</div>
+                                <div class="chart-subtitle">按用户等级与情感权重排序 · 取TOP5</div>
+                            </div>
+                        </div>
+                        <div class="hot-comments-list">
+                            <div v-for="(comment, idx) in hotComments.slice(0, 5)" :key="idx" class="hot-comment-item">
+                                <div class="comment-rank" :class="{ 'top1': idx === 0 }">{{ idx + 1 }}</div>
+                                <div class="comment-body">
+                                    <div class="comment-content">{{ comment.content }}</div>
+                                    <div class="comment-meta">
+                                        <span class="comment-user">
+                                            <span class="user-icon">👤</span>
+                                            {{ comment.user_name }}
+                                        </span>
+                                        <span class="comment-level">Lv.{{ comment.user_level }}</span>
+                                        <span class="comment-sentiment" :class="'sent-' + (comment.sentiment === 1 ? 'pos' : comment.sentiment === -1 ? 'neg' : 'neu')">
+                                            {{ getSentimentLabel(comment.sentiment) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </template>
+    </div>
+    {% endraw %}
+
+    <script>
+        const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                const loading = ref(true);
+                const refreshing = ref(false);
+                const theme = ref(localStorage.getItem('theme') || 'dark');
+                const video = ref({});
+                const stats = ref({});
+                const summary = ref({ tri: {}, quad: {} });
+                const region = ref({ provinces: [], foreign: [] });
+                const gender = ref([]);
+                const levels = ref([]);
+                const sentiment = ref({ comments: {}, danmaku: {} });
+                const heatTrend = ref({ dates: [], scores: [] });
+                const invideo = ref({ x: [], danmaku: [] });
+                const timeline = ref({ x: [], comments: [], danmaku: [] });
+                const segments = ref([]);
+                const comments = ref([]);
+                const sentimentExamples = ref(null);
+                const hotComments = ref([]);
+                const isMine = ref(false);
+                const isAdmin = ref(false);
+
+                const selectedRegion = ref('');
+                const rankCollapsed = ref(false);
+                const rankPanelRef = ref(null);
+
+                const triChartRef = ref(null);
+                const quadChartRef = ref(null);
+                const commentSentimentRef = ref(null);
+                const danmakuSentimentRef = ref(null);
+                const genderChartRef = ref(null);
+                const levelChartRef = ref(null);
+                const heatTrendRef = ref(null);
+                const invideoRef = ref(null);
+                const timelineRef = ref(null);
+
+                // 主题
+                function toggleTheme() {
+                    theme.value = theme.value === 'dark' ? 'light' : 'dark';
+                    localStorage.setItem('theme', theme.value);
+                    document.documentElement.setAttribute('data-theme', theme.value);
+                    nextTick(() => initCharts());
+                }
+
+                onMounted(() => {
+                    document.documentElement.setAttribute('data-theme', theme.value);
+                });
+
+                // 计算属性
+                const topProvinces = computed(() => {
+                    return [...(region.value.provinces || [])]
+                        .filter(p => p.value > 0)  // 只显示有数据的省份
+                        .sort((a, b) => b.value - a.value)
+                        .slice(0, 8);
+                });
+
+                // 热度相关计算
+                const heatScore = computed(() => {
+                    return heatTrend.value?.current || 0;
+                });
+
+                const heatPercent = computed(() => {
+                    const current = heatTrend.value?.current || 0;
+                    const peak = heatTrend.value?.peak || 1;
+                    if (peak === 0) return 0;
+                    return Math.min(100, Math.round(current / peak * 100));
+                });
+
+                const rankToggleText = computed(() => rankCollapsed.value ? '+' : '−');
+
+                // 筛选后的统计数据（互动数据如点赞投币等不随地区变化）
+                const filteredStats = computed(() => stats.value);
+
+                // 筛选后的情感数据
+                const filteredSentiment = computed(() => sentiment.value);
+
+                // 筛选后的等级
+                const filteredLevels = computed(() => levels.value);
+
+                // 筛选后的性别
+                const filteredGender = computed(() => gender.value);
+
+                // 获取筛选后的数据（兼容函数和ref访问）
+                function getFilteredGender() {
+                    const fg = filteredGender.value;
+                    return Array.isArray(fg) ? fg : [];
+                }
+                function getFilteredLevels() {
+                    const fl = filteredLevels.value;
+                    return Array.isArray(fl) ? fl : [];
+                }
+                function getFilteredSentiment() {
+                    const fs = filteredSentiment.value;
+                    return fs || { comments: {}, danmaku: {} };
+                }
+
+                // 工具函数
+                function fmt(n) {
+                    if (!n && n !== 0) return '0';
+                    if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
+                    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+                    return n.toString();
+                }
+
+                function toggleRank() {
+                    rankCollapsed.value = !rankCollapsed.value;
+                    rankPanelRef.value?.classList.toggle('collapsed', rankCollapsed.value);
+                }
+
+                async function selectRegion(name) {
+                    const wasSame = selectedRegion.value === name;
+                    selectedRegion.value = wasSame ? '' : name;
+
+                    if (!selectedRegion.value) {
+                        // 取消筛选，恢复全国数据
+                        await restoreAllData();
+                    } else {
+                        // 筛选新地区
+                        await loadFilteredData();
+                    }
+                    nextTick(() => updateCharts());
+                }
+
+                async function restoreAllData() {
+                    const id = window.location.pathname.split('/').pop();
+                    console.log('恢复全国数据');
+                    const [gen, lvl, sen] = await Promise.all([
+                        safeFetch(`/api/videos/${id}/gender`),
+                        safeFetch(`/api/videos/${id}/levels`),
+                        safeFetch(`/api/videos/${id}/sentiment`)
+                    ]);
+                    console.log('全国数据gender:', gen);
+                    if (gen) gender.value = gen;
+                    if (lvl) levels.value = lvl;
+                    if (sen) sentiment.value = sen;
+                }
+
+                async function loadFilteredData() {
+                    if (!selectedRegion.value) return;
+                    const id = window.location.pathname.split('/').pop();
+                    const region = selectedRegion.value;
+                    console.log('筛选地区:', region);
+
+                    const [gen, lvl, sen] = await Promise.all([
+                        safeFetch(`/api/videos/${id}/gender?region=${encodeURIComponent(region)}`),
+                        safeFetch(`/api/videos/${id}/levels?region=${encodeURIComponent(region)}`),
+                        safeFetch(`/api/videos/${id}/sentiment?region=${encodeURIComponent(region)}`)
+                    ]);
+
+                    console.log('gender API返回:', gen);
+                    console.log('levels API返回:', lvl);
+                    if (gen) gender.value = gen;
+                    if (lvl) levels.value = lvl;
+                    if (sen) sentiment.value = sen;
+                }
+
+                async function clearFilter() {
+                    selectedRegion.value = '';
+                    await restoreAllData();
+                    nextTick(() => updateCharts());
+                }
+
+                function onMapClick() {
+                    // 点击地图空白处清除筛选
+                    // 需要通过ECharts的点击事件处理
+                }
+
+                function getSentimentWidth(seg, type) {
+                    const s = seg.sentiment || {};
+                    const pos = s['正面'] || 0;
+                    const neu = s['中性'] || 0;
+                    const neg = s['负面'] || 0;
+                    const total = pos + neu + neg || 1;
+                    const map = { pos, neu, neg };
+                    return (map[type] / total * 100) + '%';
+                }
+
+                function getSentimentLabel(sentiment) {
+                    if (sentiment === 1) return '😊 正面';
+                    if (sentiment === -1) return '😞 负面';
+                    return '😐 中性';
+                }
+
+                // 颜色
+                function getC() {
+                    const d = theme.value === 'dark';
+                    return {
+                        cyan: d ? '#00d4ff' : '#0088cc',
+                        magenta: d ? '#ff3d9a' : '#e91e63',
+                        gold: '#ffc107',
+                        green: d ? '#00e676' : '#00c853',
+                        red: d ? '#ff5252' : '#f44336',
+                        text: d ? '#fff' : '#1a1a2e',
+                        textMuted: d ? 'rgba(255,255,255,0.35)' : 'rgba(26,26,46,0.35)',
+                        textSec: d ? 'rgba(255,255,255,0.6)' : 'rgba(26,26,46,0.6)',
+                        grid: d ? '#252a3a' : '#e4e6eb',
+                        bg: d ? '#1c2030' : '#f5f7fb',
+                    };
+                }
+
+                // 计算热门评论（按点赞数排序，返回TOP5不重复）
+                function calcHotComment(allComments) {
+                    if (!allComments || allComments.length === 0) return [];
+                    // 按点赞数降序排序，去重后取TOP5
+                    const seen = new Set();
+                    const unique = allComments.filter(c => {
+                        // 基于内容去重
+                        if (seen.has(c.content)) return false;
+                        seen.add(c.content);
+                        return true;
+                    });
+                    return unique
+                        .sort((a, b) => (b.like_count || 0) - (a.like_count || 0))
+                        .slice(0, 5);
+                }
+
+                // 更新图表
+                function updateCharts() {
+                    const c = getC();
+                    const s = filteredStats.value;
+                    const sen = getFilteredSentiment();
+
+                    // 三色环
+                    if (triChartRef.value) {
+                        const tri = echarts.init(triChartRef.value);
+                        tri.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                            series: [{
+                                type: 'pie', radius: ['45%', '72%'],
+                                center: ['50%', '50%'],
+                                label: { show: false },
+                                data: [
+                                    { name: '评论', value: summary.value.tri.评论数 || 1, itemStyle: { color: c.cyan } },
+                                    { name: '弹幕', value: summary.value.tri.弹幕数 || 1, itemStyle: { color: c.magenta } },
+                                    { name: '播放', value: Math.max(1, (summary.value.tri.播放量 || 0) >= 10000 ? Math.round((summary.value.tri.播放量 || 0) / 10000 * 10) / 10 : (summary.value.tri.播放量 || 0)), itemStyle: { color: c.gold } }
+                                ]
+                            }]
+                        });
+                    }
+
+                    // 四色环
+                    if (quadChartRef.value) {
+                        const quad = echarts.init(quadChartRef.value);
+                        quad.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                            series: [{
+                                type: 'pie', radius: ['45%', '72%'],
+                                center: ['50%', '50%'],
+                                label: { show: false },
+                                data: [
+                                    { name: '点赞', value: (s.like_count || 0) || 1, itemStyle: { color: c.red } },
+                                    { name: '投币', value: (s.coin_count || 0) || 1, itemStyle: { color: c.gold } },
+                                    { name: '收藏', value: (s.collect_count || 0) || 1, itemStyle: { color: c.green } },
+                                    { name: '转发', value: (s.share_count || 0) || 1, itemStyle: { color: c.magenta } }
+                                ]
+                            }]
+                        });
+                    }
+
+                    // 评论情感
+                    if (commentSentimentRef.value) {
+                        const cs = echarts.init(commentSentimentRef.value);
+                        cs.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                            series: [{
+                                type: 'pie', radius: ['45%', '72%'],
+                                center: ['50%', '50%'],
+                                label: { show: false },
+                                data: [
+                                    { name: '正面', value: sen.comments['正面'] || 0, itemStyle: { color: c.green } },
+                                    { name: '中性', value: sen.comments['中性'] || 0, itemStyle: { color: '#888' } },
+                                    { name: '负面', value: sen.comments['负面'] || 0, itemStyle: { color: c.red } }
+                                ]
+                            }]
+                        });
+                    }
+
+                    // 弹幕情感
+                    if (danmakuSentimentRef.value) {
+                        const ds = echarts.init(danmakuSentimentRef.value);
+                        ds.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                            series: [{
+                                type: 'pie', radius: ['45%', '72%'],
+                                center: ['50%', '50%'],
+                                label: { show: false },
+                                data: [
+                                    { name: '正面', value: sen.danmaku['正面'] || 0, itemStyle: { color: c.green } },
+                                    { name: '中性', value: sen.danmaku['中性'] || 0, itemStyle: { color: '#888' } },
+                                    { name: '负面', value: sen.danmaku['负面'] || 0, itemStyle: { color: c.red } }
+                                ]
+                            }]
+                        });
+                    }
+
+                    // 性别 - 使用函数获取以避免computed属性问题
+                    if (genderChartRef.value) {
+                        const gc = echarts.init(genderChartRef.value);
+                        const fgData = getFilteredGender();
+                        gc.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                            legend: { orient: 'vertical', right: 5, top: 'center', textStyle: { color: c.textMuted, fontSize: 9 } },
+                            series: [{
+                                type: 'pie', radius: ['35%', '60%'],
+                                center: ['35%', '50%'],
+                                label: { show: false },
+                                data: fgData.length > 0
+                                    ? fgData.map((d, i) => ({ ...d, itemStyle: { color: [c.cyan, c.magenta, '#888'][i] } }))
+                                    : [{ name: '暂无数据', value: 1, itemStyle: { color: '#555' } }]
+                            }]
+                        });
+                    }
+
+                    // 等级 - 使用函数获取以避免computed属性问题
+                    if (levelChartRef.value) {
+                        const lc = echarts.init(levelChartRef.value);
+                        const flData = getFilteredLevels();
+                        lc.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'axis' },
+                            grid: { left: 30, right: 10, top: 5, bottom: 20 },
+                            xAxis: { type: 'category', data: flData.map(d => d.name), axisLine: { lineStyle: { color: c.grid } }, axisLabel: { color: c.textMuted, fontSize: 8 } },
+                            yAxis: { type: 'value', show: false },
+                            series: [{
+                                type: 'bar',
+                                data: flData.map(d => d.value),
+                                itemStyle: {
+                                    color: {
+                                        type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+                                        colorStops: [{ offset: 0, color: c.cyan }, { offset: 1, color: c.magenta }]
+                                    },
+                                    borderRadius: [2, 2, 0, 0]
+                                }
+                            }]
+                        });
+                    }
+                }
+
+                // 初始化所有图表
+                function initCharts() {
+                    const c = getC();
+
+                    // 三色环
+                    if (triChartRef.value) {
+                        const tri = echarts.init(triChartRef.value);
+                        tri.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                            series: [{
+                                type: 'pie', radius: ['45%', '72%'],
+                                center: ['50%', '50%'],
+                                label: { show: false },
+                                data: [
+                                    { name: '评论', value: summary.value.tri.评论数 || 1, itemStyle: { color: c.cyan } },
+                                    { name: '弹幕', value: summary.value.tri.弹幕数 || 1, itemStyle: { color: c.magenta } },
+                                    { name: '播放', value: Math.max(1, (summary.value.tri.播放量 || 0) >= 10000 ? Math.round((summary.value.tri.播放量 || 0) / 10000 * 10) / 10 : (summary.value.tri.播放量 || 0)), itemStyle: { color: c.gold } }
+                                ]
+                            }]
+                        });
+                    }
+
+                    // 四色环
+                    if (quadChartRef.value) {
+                        const quad = echarts.init(quadChartRef.value);
+                        quad.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                            series: [{
+                                type: 'pie', radius: ['45%', '72%'],
+                                center: ['50%', '50%'],
+                                label: { show: false },
+                                data: [
+                                    { name: '点赞', value: summary.value.quad.点赞 || 1, itemStyle: { color: c.red } },
+                                    { name: '投币', value: summary.value.quad.投币 || 1, itemStyle: { color: c.gold } },
+                                    { name: '收藏', value: summary.value.quad.收藏 || 1, itemStyle: { color: c.green } },
+                                    { name: '转发', value: summary.value.quad.转发 || 1, itemStyle: { color: c.magenta } }
+                                ]
+                            }]
+                        });
+                    }
+
+                    // 评论情感
+                    if (commentSentimentRef.value) {
+                        const cs = echarts.init(commentSentimentRef.value);
+                        const csd = sentiment.value.comments || {};
+                        cs.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                            series: [{
+                                type: 'pie', radius: ['45%', '72%'],
+                                center: ['50%', '50%'],
+                                label: { show: false },
+                                data: [
+                                    { name: '正面', value: csd['正面'] || 0, itemStyle: { color: c.green } },
+                                    { name: '中性', value: csd['中性'] || 0, itemStyle: { color: '#888' } },
+                                    { name: '负面', value: csd['负面'] || 0, itemStyle: { color: c.red } }
+                                ]
+                            }]
+                        });
+                    }
+
+                    // 弹幕情感
+                    if (danmakuSentimentRef.value) {
+                        const ds = echarts.init(danmakuSentimentRef.value);
+                        const dsd = sentiment.value.danmaku || {};
+                        ds.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                            series: [{
+                                type: 'pie', radius: ['45%', '72%'],
+                                center: ['50%', '50%'],
+                                label: { show: false },
+                                data: [
+                                    { name: '正面', value: dsd['正面'] || 0, itemStyle: { color: c.green } },
+                                    { name: '中性', value: dsd['中性'] || 0, itemStyle: { color: '#888' } },
+                                    { name: '负面', value: dsd['负面'] || 0, itemStyle: { color: c.red } }
+                                ]
+                            }]
+                        });
+                    }
+
+                    // 性别
+                    if (genderChartRef.value) {
+                        const gc = echarts.init(genderChartRef.value);
+                        gc.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                            legend: { orient: 'vertical', right: 5, top: 'center', textStyle: { color: c.textMuted, fontSize: 9 } },
+                            series: [{
+                                type: 'pie', radius: ['35%', '60%'],
+                                center: ['35%', '50%'],
+                                label: { show: false },
+                                data: gender.value.length > 0
+                                    ? gender.value.map((d, i) => ({ ...d, itemStyle: { color: [c.cyan, c.magenta, '#888'][i] } }))
+                                    : [{ name: '暂无数据', value: 1, itemStyle: { color: '#555' } }]
+                            }]
+                        });
+                    }
+
+                    // 等级
+                    if (levelChartRef.value) {
+                        const lc = echarts.init(levelChartRef.value);
+                        lc.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'axis' },
+                            grid: { left: 30, right: 10, top: 5, bottom: 20 },
+                            xAxis: { type: 'category', data: levels.value.map(d => d.name), axisLine: { lineStyle: { color: c.grid } }, axisLabel: { color: c.textMuted, fontSize: 8 } },
+                            yAxis: { type: 'value', show: false },
+                            series: [{
+                                type: 'bar',
+                                data: levels.value.map(d => d.value),
+                                itemStyle: {
+                                    color: {
+                                        type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+                                        colorStops: [{ offset: 0, color: c.cyan }, { offset: 1, color: c.magenta }]
+                                    },
+                                    borderRadius: [2, 2, 0, 0]
+                                }
+                            }]
+                        });
+                    }
+
+                    // 热度趋势
+                    if (heatTrendRef.value) {
+                        const ht = echarts.init(heatTrendRef.value);
+                        ht.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'axis' },
+                            grid: { left: 40, right: 15, top: 10, bottom: 25 },
+                            xAxis: { type: 'category', data: heatTrend.value.dates || [], axisLine: { lineStyle: { color: c.grid } }, axisLabel: { color: c.textMuted, fontSize: 9 } },
+                            yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: c.grid } }, axisLabel: { color: c.textMuted } },
+                            series: [{
+                                data: heatTrend.value.scores || [],
+                                type: 'line', smooth: true,
+                                lineStyle: { color: c.cyan, width: 2.5 },
+                                areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: c.cyan + '50' }, { offset: 1, color: c.cyan + '00' }] } },
+                                symbol: 'circle', symbolSize: 5,
+                                itemStyle: { color: c.cyan }
+                            }]
+                        });
+                    }
+
+                    // 弹幕视频内分布
+                    if (invideoRef.value) {
+                        const iv = echarts.init(invideoRef.value);
+                        iv.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'axis' },
+                            grid: { left: 35, right: 10, top: 8, bottom: 20 },
+                            xAxis: { type: 'category', data: invideo.value.x || [], axisLine: { lineStyle: { color: c.grid } }, axisLabel: { color: c.textMuted, fontSize: 8 } },
+                            yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: c.grid } }, axisLabel: { color: c.textMuted } },
+                            series: [{
+                                type: 'bar',
+                                data: invideo.value.danmaku || [],
+                                itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: c.cyan }, { offset: 1, color: c.magenta + '60' }] }, borderRadius: [1, 1, 0, 0] }
+                            }]
+                        });
+                    }
+
+                    // 发布时间分布
+                    if (timelineRef.value) {
+                        const tl = echarts.init(timelineRef.value);
+                        tl.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'axis' },
+                            legend: { data: ['评论', '弹幕'], textStyle: { color: c.textMuted, fontSize: 9 }, top: 0 },
+                            grid: { left: 35, right: 10, top: 25, bottom: 20 },
+                            xAxis: { type: 'category', data: timeline.value.x || [], axisLine: { lineStyle: { color: c.grid } }, axisLabel: { color: c.textMuted, fontSize: 8 } },
+                            yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: c.grid } }, axisLabel: { color: c.textMuted } },
+                            series: [
+                                { name: '评论', type: 'line', data: timeline.value.comments || [], lineStyle: { color: c.cyan, width: 2 }, itemStyle: { color: c.cyan }, smooth: true, areaStyle: { color: c.cyan + '25' } },
+                                { name: '弹幕', type: 'line', data: timeline.value.danmaku || [], lineStyle: { color: c.magenta, width: 2 }, itemStyle: { color: c.magenta }, smooth: true, areaStyle: { color: c.magenta + '25' } }
+                            ]
+                        });
+                    }
+
+                    // 地图
+                    const mapEl = document.getElementById('mapChart');
+                    if (mapEl) {
+                        const mp = echarts.init(mapEl);
+                        mp.off('click');
+                        mp.on('click', (params) => {
+                            if (params.name) {
+                                selectRegion(params.name);
+                            }
+                        });
+
+                        const provs = region.value.provinces || [];
+                        const maxV = Math.max(...provs.map(p => p.value || 0), 1);
+
+                        // 加载地图JSON：优先本地，失败则用远程
+                        function loadMapGeoJSON() {
+                            return fetch('/static/china.json')
+                                .then(r => {
+                                    if (!r.ok) throw new Error('本地地图JSON加载失败');
+                                    return r.json();
+                                });
+                        }
+
+                        function loadMapOption(china) {
+                            echarts.registerMap('china', china);
+                            mp.setOption({
+                                backgroundColor: 'transparent',
+                                tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                                visualMap: {
+                                    show: true, type: 'continuous', min: 0, max: maxV,
+                                    text: ['高', '低'], textStyle: { color: c.textMuted, fontSize: 9 },
+                                    realtime: false, calculable: true,
+                                    left: 10, bottom: 10,
+                                    inRange: {
+                                        color: theme.value === 'dark'
+                                            ? ['#2a3a5c', '#3d6a9f', '#00a0e0', c.cyan]
+                                            : ['#d0d8e8', '#7ba3cc', '#4080c0', '#0055aa']
+                                    }
+                                },
+                                series: [{
+                                    type: 'map',
+                                    map: 'china',
+                                    roam: true,
+                                    zoom: 1.2,
+                                    itemStyle: {
+                                        areaColor: theme.value === 'dark' ? '#1a2030' : '#e8eaf0',
+                                        borderColor: c.cyan + '60'
+                                    },
+                                    emphasis: { areaColor: c.cyan + '50', label: { show: true, color: c.text, fontSize: 11 } },
+                                    label: { show: false },
+                                    data: provs
+                                }]
+                            });
+                        }
+
+                        // 先尝试本地
+                        loadMapGeoJSON()
+                            .then(china => loadMapOption(china))
+                            .catch(() => {
+                                // 本地失败，尝试远程
+                                console.warn('本地地图JSON加载失败，尝试远程...');
+                                return fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+                                    .then(r => {
+                                        if (!r.ok) throw new Error('远程地图JSON加载失败');
+                                        return r.json();
+                                    })
+                                    .then(china => loadMapOption(china));
+                            })
+                            .catch(err => console.warn('地图加载失败:', err.message));
+                    }
+                }
+
+                async function safeFetch(url) {
+                    try {
+                        const r = await fetch(url);
+                        if (!r.ok) return null;
+                        return await r.json();
+                    } catch { return null; }
+                }
+
+                async function safeFetchJSON(url, options = {}) {
+                    try {
+                        const r = await fetch(url, options);
+                        const text = await r.text();
+
+                        // 检查是否返回了HTML页面（如登录页、错误页）
+                        if (text.startsWith('<') && text.includes('DOCTYPE')) {
+                            console.warn('服务器返回了HTML页面而不是JSON:', url, 'status:', r.status);
+                            return { _error: 'server_html', _status: r.status, _html: text.substring(0, 200) };
+                        }
+
+                        if (!r.ok) {
+                            console.warn('API请求失败:', url, 'status:', r.status);
+                            return { _error: 'http_error', _status: r.status };
+                        }
+
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.warn('safeFetchJSON失败:', url, e.message);
+                        return { _error: 'parse_error', _message: e.message };
+                    }
+                }
+
+                // 刷新数据
+                async function refreshData() {
+                    if (refreshing.value) return;
+                    refreshing.value = true;
+                    try {
+                        const id = window.location.pathname.split('/').pop();
+                        const result = await safeFetchJSON(`/api/videos/${id}/refresh`, { method: 'POST' });
+                        if (!result || result._error) {
+                            const errMsg = result?._error === 'server_html' ? '请先登录' :
+                                          result?._error === 'http_error' ? `HTTP错误: ${result._status}` :
+                                          result?._error === 'parse_error' ? result._message : '服务器错误';
+                            alert('更新失败: ' + errMsg);
+                            return;
+                        }
+                        if (result.error) {
+                            alert('更新失败: ' + result.error);
+                        } else {
+                            await loadData(id);
+                            alert('数据更新成功！');
+                        }
+                    } catch (e) {
+                        alert('更新失败: ' + e.message);
+                    } finally {
+                        refreshing.value = false;
+                    }
+                }
+
+                // 强制爬取（重新爬取评论和弹幕）
+                async function forceCrawlData() {
+                    if (refreshing.value) return;
+                    if (!confirm('强制爬取将删除现有评论和弹幕数据，重新从B站获取。确定要继续吗？')) return;
+                    refreshing.value = true;
+                    try {
+                        const id = window.location.pathname.split('/').pop();
+                        const data = await safeFetchJSON(`/api/videos/${id}/refresh?force_crawl=1`, { method: 'POST' });
+
+                        if (!data || data._error) {
+                            const errMsg = data?._error === 'server_html' ? '请先登录' :
+                                          data?._error === 'http_error' ? `HTTP错误: ${data._status}` :
+                                          data?._error === 'parse_error' ? data._message : '服务器错误';
+                            alert('爬取失败: ' + errMsg);
+                            return;
+                        }
+                        if (data.error) {
+                            alert('爬取失败: ' + data.error);
+                        } else {
+                            await loadData(id);
+                            const msg = data.crawled ? `爬取完成！评论: ${data.crawled.comments || 0}, 弹幕: ${data.crawled.danmaku || 0}` : '数据更新成功！';
+                            alert(msg);
+                        }
+                    } catch (e) {
+                        alert('爬取失败: ' + e.message);
+                    } finally {
+                        refreshing.value = false;
+                    }
+                }
+
+                async function loadData(id) {
+                    const [d, sum, reg, gen, sen, ht, inv, tl, seg, lvl, cmt, examples] = await Promise.all([
+                        safeFetch(`/api/videos/${id}`),
+                        safeFetch(`/api/videos/${id}/summary`),
+                        safeFetch(`/api/videos/${id}/region`),
+                        safeFetch(`/api/videos/${id}/gender`),
+                        safeFetch(`/api/videos/${id}/sentiment`),
+                        safeFetch(`/api/videos/${id}/heat-trend`),
+                        safeFetch(`/api/videos/${id}/invideo`),
+                        safeFetch(`/api/videos/${id}/timeline`),
+                        safeFetch(`/api/videos/${id}/segments`),
+                        safeFetch(`/api/videos/${id}/levels`),
+                        safeFetch(`/api/videos/${id}/comments?page_size=200`),
+                        safeFetch(`/api/videos/${id}/sentiment-examples`)
+                    ]);
+
+                    if (!d) { console.error('视频加载失败'); return; }
+
+                    video.value = d;
+                    isMine.value = d.is_mine || false;
+                    isAdmin.value = d.is_admin || false;
+                    stats.value = d.stats || {};
+                    summary.value = sum || { tri: {}, quad: {} };
+                    region.value = reg ? {
+                        provinces: reg.provinces || [],
+                        foreign: reg.foreign || [],
+                        minor: reg.minor || [],
+                        unknown: reg.unknown || 0,
+                        has_region_data: reg.has_region_data || false,
+                        message: reg.message || null
+                    } : { provinces: [], foreign: [], minor: [], unknown: 0, has_region_data: false, message: null };
+                    gender.value = gen || [];
+                    sentiment.value = sen || { comments: {}, danmaku: {} };
+                    // 新的热度趋势数据结构
+                    heatTrend.value = ht && ht.dates?.length ? {
+                        current: ht.current || 0,
+                        peak: ht.peak || 0,
+                        peak_day: ht.peak_day || 0,
+                        peak_date: ht.peak_date || null,
+                        dates: ht.dates || [],
+                        scores: ht.scores || [],
+                        days_total: ht.days_total || 0,
+                        estimated: ht.estimated || false
+                    } : { current: 0, peak: 0, peak_day: 0, dates: [], scores: [], estimated: true };
+                    invideo.value = inv && inv.x?.length ? inv : { x: ['暂无数据'], danmaku: [0] };
+                    timeline.value = tl && tl.x?.length ? tl : { x: ['暂无数据'], comments: [0], danmaku: [0] };
+                    levels.value = lvl || [];
+                    comments.value = cmt?.comments || [];
+                    sentimentExamples.value = examples || null;
+
+                    // 计算热门评论
+                    if (comments.value.length > 0) {
+                        hotComments.value = calcHotComment(comments.value);
+                    } else {
+                        hotComments.value = [];
+                    }
+
+                    // 热点时段
+                    if (seg?.segments) {
+                        segments.value = seg.segments || [];
+                    } else {
+                        segments.value = [];
+                    }
+
+                    loading.value = false;
+                    await nextTick();
+                    initCharts();
+                }
+
+                onMounted(async () => {
+                    try {
+                        const id = window.location.pathname.split('/').pop();
+                        await loadData(id);
+                    } catch (e) {
+                        console.error('加载失败:', e);
+                    }
+                });
+
+                return {
+                    loading, refreshing, theme, video, stats, summary, region, gender, levels,
+                    sentiment, heatTrend, invideo, timeline, segments, topProvinces,
+                    heatScore, heatPercent, rankCollapsed, rankToggleText, rankPanelRef, selectedRegion,
+                    sentimentExamples, hotComments,
+                    toggleRank, toggleTheme, fmt, getSentimentWidth, getSentimentLabel, refreshData, forceCrawlData,
+                    selectRegion, clearFilter, onMapClick,
+                    triChartRef, quadChartRef, commentSentimentRef, danmakuSentimentRef,
+                    genderChartRef, levelChartRef, heatTrendRef, invideoRef, timelineRef
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

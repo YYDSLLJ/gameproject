@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>分析视频 - 多源热度分析</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #0b1020;
+      color: #e6eefc;
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #1a2447 0%, #121a33 100%);
+      padding: 16px 40px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.3);
+    }
+    .header a {
+      color: #e6eefc;
+      text-decoration: none;
+      opacity: 0.8;
+    }
+    .header h1 {
+      font-size: 20px;
+      background: linear-gradient(90deg, #00d4ff, #7b2dff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .container {
+      max-width: 800px;
+      margin: 60px auto;
+      padding: 0 20px;
+      text-align: center;
+    }
+    .input-group {
+      background: #121a33;
+      border-radius: 14px;
+      padding: 30px;
+      box-shadow: 0 6px 20px rgba(0,0,0,.25);
+    }
+    .input-group h2 {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 16px 20px;
+      font-size: 16px;
+      background: #1a2447;
+      border: 2px solid #2a3557;
+      border-radius: 10px;
+      color: #e6eefc;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .input-group input:focus {
+      border-color: #7b2dff;
+    }
+    .input-group input::placeholder {
+      color: #666;
+    }
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .btn {
+      flex: 1;
+      padding: 14px 24px;
+      font-size: 15px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #7b2dff, #00d4ff);
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #2a3557;
+      color: #e6eefc;
+    }
+    .tips {
+      margin-top: 30px;
+      text-align: left;
+      font-size: 13px;
+      opacity: 0.7;
+    }
+    .tips h3 {
+      font-size: 14px;
+      margin-bottom: 10px;
+      opacity: 1;
+    }
+    .tips code {
+      background: #1a2447;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .result {
+      margin-top: 30px;
+      text-align: left;
+      display: none;
+    }
+    .result.show {
+      display: block;
+    }
+    .result-card {
+      background: #1a2447;
+      border-radius: 10px;
+      padding: 20px;
+      display: flex;
+      gap: 20px;
+    }
+    .result-card img {
+      width: 120px;
+      height: 75px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .result-info h3 {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+    .result-info p {
+      font-size: 13px;
+      opacity: 0.7;
+      margin-bottom: 4px;
+    }
+    .result-btn {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #7b2dff, #00d4ff);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .loading {
+      display: none;
+      margin-top: 20px;
+      color: #00d4ff;
+    }
+    .loading.show {
+      display: block;
+    }
+    .error {
+      display: none;
+      margin-top: 20px;
+      color: #ff4d4f;
+      padding: 15px;
+      background: rgba(255,77,77,0.1);
+      border-radius: 8px;
+    }
+    .error.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="/">← 返回首页</a>
+  </div>
+
+  <div class="container">
+    <div class="input-group">
+      <h2>输入视频链接</h2>
+      <input type="text" id="videoUrl" placeholder="https://www.bilibili.com/video/BVxxx" />
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="analyzeUrl()">分析</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('videoUrl').value=''">清空</button>
+      </div>
+
+      <div id="loading" class="loading">正在分析，请稍候...</div>
+      <div id="error" class="error"></div>
+
+      <div id="result" class="result">
+        <div class="result-card">
+          <img id="resultCover" src="" alt="">
+          <div class="result-info">
+            <h3 id="resultTitle">-</h3>
+            <p id="resultAuthor">-</p>
+            <p id="resultPlatform">-</p>
+            <a id="resultLink" href="#" class="result-btn">查看详情 →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tips">
+      <h3>支持的链接格式</h3>
+      <p><code>B站</code> https://www.bilibili.com/video/BV1xx411c7XZ</p>
+      <p><code>抖音</code> https://www.douyin.com/video/xxxxx (预留)</p>
+    </div>
+  </div>
+
+  <script>
+    async function analyzeUrl() {
+      const url = document.getElementById('videoUrl').value.trim();
+      if (!url) {
+        showError('请输入视频链接');
+        return;
+      }
+
+      document.getElementById('loading').classList.add('show');
+      document.getElementById('error').classList.remove('show');
+      document.getElementById('result').classList.remove('show');
+
+      try {
+        const resp = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({url})
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          throw new Error(data.error || '分析失败');
+        }
+
+        document.getElementById('resultCover').src = data.cover || '';
+        document.getElementById('resultTitle').textContent = data.title || '无标题';
+        document.getElementById('resultAuthor').textContent = `作者: ${data.author || '-'}`;
+        document.getElementById('resultPlatform').textContent =
+          data.platform === 'bilibili' ? '平台: B站' : '平台: 抖音';
+        document.getElementById('resultLink').href = `/video/${data.id}`;
+
+        document.getElementById('result').classList.add('show');
+
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        document.getElementById('loading').classList.remove('show');
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+
+    // 回车提交
+    document.getElementById('videoUrl').addEventListener('keypress', e => {
+      if (e.key === 'Enter') analyzeUrl();
+    });
+  </script>
+</body>
+</html>

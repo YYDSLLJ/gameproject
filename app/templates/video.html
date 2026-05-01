@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>视频详情 - 多源热度分析</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #0b1020;
+      color: #e6eefc;
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #1a2447 0%, #121a33 100%);
+      padding: 16px 40px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.3);
+    }
+    .header a {
+      color: #e6eefc;
+      text-decoration: none;
+      opacity: 0.8;
+    }
+    .header a:hover { opacity: 1; }
+    .header h1 {
+      font-size: 18px;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .video-info {
+      background: #121a33;
+      padding: 16px 40px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      border-bottom: 1px solid #1a2447;
+    }
+    .video-info img {
+      width: 100px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .video-info .meta {
+      font-size: 13px;
+      opacity: 0.7;
+    }
+    .video-info .platform {
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .platform.bilibili { background: #00a1d6; }
+    .platform.douyin { background: #000; color: #fff; }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      grid-template-rows: auto;
+      gap: 12px;
+      padding: 12px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    /* 左列 */
+    .left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* 右列 */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card {
+      background: #121a33;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 6px 20px rgba(0,0,0,.25);
+    }
+    .card-title {
+      font-size: 14px;
+      opacity: 0.8;
+      margin-bottom: 12px;
+    }
+    .chart {
+      width: 100%;
+      height: 200px;
+    }
+    .chart-lg {
+      height: 280px;
+    }
+
+    /* 地图区域 - 大底座 */
+    .map-container {
+      display: grid;
+      grid-template-columns: 1fr 200px;
+      gap: 12px;
+    }
+    .map-card {
+      background: #121a33;
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .map-chart {
+      width: 100%;
+      height: 350px;
+    }
+    .side-charts {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .side-chart {
+      height: 160px;
+    }
+
+    /* 弹幕分段 */
+    .segments-scroll {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    .segment-card {
+      min-width: 160px;
+      background: #1a2447;
+      border-radius: 10px;
+      padding: 12px;
+      flex-shrink: 0;
+    }
+    .segment-time {
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    .segment-count {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-bottom: 8px;
+    }
+    .segment-sentiment {
+      display: flex;
+      gap: 4px;
+      height: 6px;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .segment-sentiment .pos { background: #52c41a; }
+    .segment-sentiment .neu { background: #faad14; }
+    .segment-sentiment .neg { background: #ff4d4f; }
+    .segment-keywords {
+      font-size: 11px;
+      opacity: 0.8;
+    }
+    .segment-keywords span {
+      background: #2a3557;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-right: 4px;
+      display: inline-block;
+      margin-bottom: 4px;
+    }
+
+    /* 底部 */
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 300px;
+      gap: 12px;
+    }
+    .wordcloud {
+      height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wordcloud img {
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      opacity: 0.6;
+    }
+    .error {
+      text-align: center;
+      padding: 40px;
+      color: #ff4d4f;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+</head>
+<body>
+  <div class="header">
+    <a href="/">← 返回</a>
+    <h1 id="videoTitle">加载中...</h1>
+    <span id="videoPlatform" class="platform">-</span>
+  </div>
+
+  <div class="video-info">
+    <img id="videoCover" src="" alt="">
+    <div>
+      <div class="meta" id="videoAuthor">-</div>
+      <div class="meta" id="videoUrl"><a href="#" target="_blank">-</a></div>
+    </div>
+  </div>
+
+  <div class="dashboard">
+    <!-- 左列 -->
+    <div class="left-col">
+      <!-- 三色环 -->
+      <div class="card">
+        <div class="card-title">三色环（评论/弹幕/播放）</div>
+        <div id="tri" class="chart"></div>
+      </div>
+
+      <!-- 地图 - 大底座 -->
+      <div class="map-card">
+        <div class="card-title">中国省份评论热力</div>
+        <div class="map-container">
+          <div id="chinaMap" class="map-chart"></div>
+          <div class="side-charts">
+            <div id="minor" class="side-chart"></div>
+            <div id="foreign" class="side-chart"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 热度趋势 -->
+      <div class="card">
+        <div class="card-title">热度趋势（按周）</div>
+        <div id="heatTrend" class="chart chart-lg"></div>
+      </div>
+
+      <!-- 时间线 -->
+      <div class="card">
+        <div class="card-title">评论 & 弹幕时间线</div>
+        <div id="timeline" class="chart chart-lg"></div>
+      </div>
+
+      <!-- 弹幕分段 -->
+      <div class="card">
+        <div class="card-title">弹幕分段分析</div>
+        <div id="segments" class="segments-scroll">
+          <div class="loading">加载中...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右列 -->
+    <div class="right-col">
+      <!-- 四色环 -->
+      <div class="card">
+        <div class="card-title">四色环（点赞/投币/收藏/转发）</div>
+        <div id="quad" class="chart"></div>
+      </div>
+
+      <!-- 情感分析 -->
+      <div class="card">
+        <div class="card-title">情感分析</div>
+        <div style="display:flex; gap:10px; height:180px;">
+          <div id="sentDm" style="flex:1;"></div>
+          <div id="sentCm" style="flex:1;"></div>
+        </div>
+      </div>
+
+      <!-- 等级分布 -->
+      <div class="card">
+        <div class="card-title">用户等级分布</div>
+        <div id="levels" class="chart"></div>
+      </div>
+
+      <!-- 性别比例 -->
+      <div class="card">
+        <div class="card-title">性别比例</div>
+        <div id="gender" class="chart"></div>
+      </div>
+
+      <!-- 视频内弹幕分布 -->
+      <div class="card">
+        <div class="card-title">弹幕出现时间（视频内）</div>
+        <div id="invideo" class="chart"></div>
+      </div>
+    </div>
+
+    <!-- 底部 -->
+    <div class="bottom-row" style="grid-column: 1 / -1;">
+      <div class="card">
+        <div class="card-title">弹幕词云</div>
+        <div class="wordcloud">
+          <img id="wcDanmaku" src="/api/wordcloud/danmaku.png" alt="">
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">评论词云</div>
+        <div class="wordcloud">
+          <img id="wcComments" src="/api/wordcloud/comments.png" alt="">
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">评论列表</div>
+        <div id="commentList" style="max-height:200px; overflow-y:auto; font-size:12px;">
+          <div class="loading">加载中...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api/videos/{{ video_id }}';
+
+    // 初始化图表
+    const tri = echarts.init(document.getElementById('tri'));
+    const quad = echarts.init(document.getElementById('quad'));
+    const chinaMap = echarts.init(document.getElementById('chinaMap'));
+    const minor = echarts.init(document.getElementById('minor'));
+    const foreign = echarts.init(document.getElementById('foreign'));
+    const heatTrend = echarts.init(document.getElementById('heatTrend'));
+    const timeline = echarts.init(document.getElementById('timeline'));
+    const sentDm = echarts.init(document.getElementById('sentDm'));
+    const sentCm = echarts.init(document.getElementById('sentCm'));
+    const levels = echarts.init(document.getElementById('levels'));
+    const gender = echarts.init(document.getElementById('gender'));
+    const invideo = echarts.init(document.getElementById('invideo'));
+
+    window.addEventListener('resize', () => {
+      [tri, quad, chinaMap, minor, foreign, heatTrend, timeline,
+       sentDm, sentCm, levels, gender, invideo].forEach(c => c.resize());
+    });
+
+    async function jget(url) {
+      const r = await fetch(url);
+      return await r.json();
+    }
+
+    async function loadVideoInfo() {
+      const data = await jget(API_BASE);
+      document.getElementById('videoTitle').textContent = data.title || '无标题';
+      document.getElementById('videoPlatform').textContent =
+        data.platform === 'bilibili' ? 'B站' : '抖音';
+      document.getElementById('videoPlatform').className = `platform ${data.platform}`;
+      document.getElementById('videoCover').src = data.cover || '';
+      document.getElementById('videoAuthor').textContent = `UP主: ${data.author || '-'}`;
+      document.getElementById('videoUrl').innerHTML =
+        `<a href="${data.url}" target="_blank">${data.url}</a>`;
+    }
+
+    async function loadSummary() {
+      const data = await jget(`${API_BASE}/summary`);
+      tri.setOption({
+        tooltip: {trigger:'item'},
+        series: [{
+          type:'pie', radius:['50%','75%'],
+          label: {show:true, formatter:'{b}: {c}'},
+          data: Object.entries(data.tri).map(([k,v]) => ({name:k, value:v}))
+        }]
+      });
+      quad.setOption({
+        tooltip: {trigger:'item'},
+        series: [{
+          type:'pie', radius:['50%','75%'],
+          label: {show:true, formatter:'{b}: {c}'},
+          data: Object.entries(data.quad).map(([k,v]) => ({name:k, value:v}))
+        }]
+      });
+    }
+
+    async function loadRegion() {
+      // 加载中国地图
+      try {
+        const resp = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json');
+        const geoJSON = await resp.json();
+        echarts.registerMap('china', geoJSON);
+      } catch (e) {
+        console.warn('地图加载失败:', e);
+      }
+
+      const data = await jget(`${API_BASE}/region`);
+
+      chinaMap.setOption({
+        tooltip: {trigger:'item', formatter:(p) => `${p.name}: ${p.value||0}`},
+        visualMap: {min:0, max:Math.max(1, ...data.provinces.map(x=>x.value)),
+                    left:'left', bottom:0, text:['高','低'], calculable:true,
+                    inRange:{color:['#d4e1fa','#2f6feb']}},
+        series: [{type:'map', map:'china', roam:true, label:{show:false}, data:data.provinces}]
+      });
+
+      minor.setOption({
+        tooltip: {trigger:'axis'},
+        xAxis: {type:'value'},
+        yAxis: {type:'category', data:data.minor.map(x=>x.name), inverse:true},
+        series: [{type:'bar', data:data.minor.map(x=>x.value)}]
+      });
+
+      foreign.setOption({
+        tooltip: {trigger:'axis'},
+        xAxis: {type:'value'},
+        yAxis: {type:'category', data:data.foreign.map(x=>x.name), inverse:true},
+        series: [{type:'bar', data:data.foreign.map(x=>x.value)}]
+      });
+    }
+
+    async function loadSentiment() {
+      const data = await jget(`${API_BASE}/sentiment`);
+      const dmArr = Object.entries(data.danmaku).map(([k,v]) => ({name:k, value:v}));
+      const cmArr = Object.entries(data.comments).map(([k,v]) => ({name:k, value:v}));
+      sentDm.setOption({tooltip:{trigger:'item'}, series:[{type:'pie', radius:['40%','70%'], data:dmArr}]});
+      sentCm.setOption({tooltip:{trigger:'item'}, series:[{type:'pie', radius:['40%','70%'], data:cmArr}]});
+    }
+
+    async function loadLevels() {
+      const data = await jget(`${API_BASE}/levels`);
+      levels.setOption({tooltip:{trigger:'item'}, series:[{type:'pie', radius:['40%','70%'], label:{formatter:'{b}: {d}%'}, data:data}]});
+    }
+
+    async function loadGender() {
+      const data = await jget(`${API_BASE}/gender`);
+      gender.setOption({tooltip:{trigger:'item'}, series:[{type:'pie', radius:['40%','70%'], label:{formatter:'{b}: {d}%'}, data:data}]});
+    }
+
+    async function loadHeatTrend() {
+      const data = await jget(`${API_BASE}/heat-trend`);
+      heatTrend.setOption({
+        tooltip: {trigger:'axis'},
+        xAxis: {type:'category', data:data.dates},
+        yAxis: {type:'value'},
+        series: [{name:'热度', type:'line', data:data.scores, smooth:true}]
+      });
+    }
+
+    async function loadTimeline() {
+      const data = await jget(`${API_BASE}/timeline`);
+      timeline.setOption({
+        tooltip: {trigger:'axis'},
+        xAxis: {type:'category', data:data.x},
+        yAxis: {type:'value'},
+        series: [
+          {name:'评论', type:'line', data:data.comments, smooth:true},
+          {name:'弹幕', type:'line', data:data.danmaku, smooth:true}
+        ]
+      });
+    }
+
+    async function loadInvideo() {
+      const data = await jget(`${API_BASE}/invideo`);
+      invideo.setOption({
+        tooltip: {trigger:'axis'},
+        xAxis: {type:'category', data:data.x},
+        yAxis: {type:'value'},
+        series: [{name:'弹幕', type:'line', data:data.danmaku, smooth:true}]
+      });
+    }
+
+    async function loadSegments() {
+      const data = await jget(`${API_BASE}/segments`);
+      const container = document.getElementById('segments');
+
+      if (!data.segments || data.segments.length === 0) {
+        container.innerHTML = '<div style="opacity:0.6">暂无弹幕数据</div>';
+        return;
+      }
+
+      container.innerHTML = data.segments.map(seg => {
+        const total = seg.sentiment.正面 + seg.sentiment.中性 + seg.sentiment.负面;
+        const posP = total ? (seg.sentiment.正面 / total * 100).toFixed(0) : 0;
+        const neuP = total ? (seg.sentiment.中性 / total * 100).toFixed(0) : 0;
+        const negP = total ? (seg.sentiment.负面 / total * 100).toFixed(0) : 0;
+
+        return `
+          <div class="segment-card">
+            <div class="segment-time">${seg.time_start_str} - ${seg.time_end_str}</div>
+            <div class="segment-count">弹幕数: ${seg.count}</div>
+            <div class="segment-sentiment">
+              <div class="pos" style="width:${posP}%"></div>
+              <div class="neu" style="width:${neuP}%"></div>
+              <div class="neg" style="width:${negP}%"></div>
+            </div>
+            <div class="segment-keywords">
+              ${(seg.keywords || []).map(k => `<span>${k}</span>`).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function loadComments() {
+      const data = await jget(`${API_BASE}/comments?page_size=20`);
+      const container = document.getElementById('commentList');
+
+      if (!data.comments || data.comments.length === 0) {
+        container.innerHTML = '<div style="opacity:0.6">暂无评论</div>';
+        return;
+      }
+
+      container.innerHTML = data.comments.map(c => {
+        const sentimentLabel = c.sentiment === 1 ? '正' : (c.sentiment === -1 ? '负' : '中');
+        const sentimentColor = c.sentiment === 1 ? '#52c41a' : (c.sentiment === -1 ? '#ff4d4f' : '#faad14');
+        return `
+          <div style="padding:8px; border-bottom:1px solid #1a2447;">
+            <span style="color:${sentimentColor}; font-size:10px;">[${sentimentLabel}]</span>
+            ${c.content}
+            <span style="opacity:0.5; font-size:10px; margin-left:8px;">${c.region || ''}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function init() {
+      await loadVideoInfo();
+      await Promise.all([
+        loadSummary(),
+        loadRegion(),
+        loadSentiment(),
+        loadLevels(),
+        loadGender(),
+        loadHeatTrend(),
+        loadTimeline(),
+        loadInvideo(),
+        loadSegments(),
+        loadComments()
+      ]);
+    }
+
+    init();
+  </script>
+</body>
+</html>

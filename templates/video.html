@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ video.title }} - 数据驾驶舱</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-void: #030308;
+            --bg-deep: #0a0a12;
+            --bg-surface: #12121f;
+            --bg-card: rgba(18, 18, 31, 0.9);
+            --cyan: #00f0ff;
+            --cyan-dim: rgba(0, 240, 255, 0.15);
+            --magenta: #ff00aa;
+            --gold: #ffd700;
+            --green: #00ff88;
+            --red: #ff3366;
+            --text-bright: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.6);
+            --text-muted: rgba(255, 255, 255, 0.35);
+            --border-glow: rgba(0, 240, 255, 0.2);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Sans SC', 'JetBrains Mono', sans-serif;
+            background: var(--bg-void);
+            color: var(--text-bright);
+            min-height: 100vh;
+        }
+
+        .bg-grid {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(0, 240, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .header {
+            position: sticky; top: 0; z-index: 100;
+            padding: 14px 32px;
+            display: flex; align-items: center; gap: 20px;
+            background: rgba(10, 10, 18, 0.95);
+            border-bottom: 1px solid var(--border-glow);
+            backdrop-filter: blur(15px);
+        }
+
+        .back-btn {
+            display: flex; align-items: center; gap: 6px;
+            color: var(--cyan); text-decoration: none; font-size: 13px;
+            padding: 8px 16px;
+            border: 1px solid var(--cyan-dim); border-radius: 6px;
+            background: var(--cyan-dim);
+            transition: all 0.3s;
+        }
+        .back-btn:hover {
+            background: rgba(0, 240, 255, 0.25);
+            border-color: var(--cyan);
+            box-shadow: 0 0 20px var(--cyan-dim);
+        }
+
+        .header-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 15px; font-weight: 600;
+            letter-spacing: 3px; text-transform: uppercase;
+            background: linear-gradient(90deg, var(--cyan), var(--magenta));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .platform-badge {
+            padding: 5px 14px;
+            background: linear-gradient(135deg, var(--magenta), var(--cyan));
+            border-radius: 20px; font-size: 11px; font-weight: 600;
+        }
+
+        .container {
+            position: relative; z-index: 1;
+            max-width: 1600px; margin: 0 auto;
+            padding: 24px 32px;
+        }
+
+        /* Hero */
+        .hero {
+            display: flex; gap: 24px;
+            margin-bottom: 24px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .cover-wrap {
+            position: relative; width: 280px; height: 158px; flex-shrink: 0;
+            border-radius: 10px; overflow: hidden;
+        }
+
+        .cover-wrap::after {
+            content: ''; position: absolute; inset: 0;
+            border-radius: 10px; padding: 2px;
+            background: linear-gradient(135deg, var(--cyan), var(--magenta), var(--gold));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor; mask-composite: exclude;
+        }
+
+        .cover {
+            width: 100%; height: 100%; object-fit: cover; border-radius: 10px;
+            background: var(--bg-surface);
+        }
+
+        .hero-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+
+        .video-title {
+            font-size: 22px; font-weight: 600; margin-bottom: 12px;
+            line-height: 1.4;
+            background: linear-gradient(90deg, var(--text-bright), var(--text-dim));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .meta-row { display: flex; gap: 20px; flex-wrap: wrap; }
+        .meta-item { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+        .meta-item .icon { font-size: 14px; }
+        .meta-item .author { color: var(--cyan); font-weight: 500; }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
+            margin-bottom: 24px;
+            animation: fadeIn 0.5s ease-out 0.1s backwards;
+        }
+
+        .stat-card {
+            position: relative;
+            background: var(--bg-card); border: 1px solid var(--border-glow);
+            border-radius: 10px; padding: 16px; text-align: center;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s; overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, var(--cyan), var(--magenta));
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--cyan-dim);
+            box-shadow: 0 8px 30px rgba(0, 240, 255, 0.15);
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 22px; font-weight: 700; margin-bottom: 4px;
+        }
+        .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; }
+
+        .stat-card:nth-child(1) .stat-value { color: var(--cyan); }
+        .stat-card:nth-child(2) .stat-value { color: var(--red); }
+        .stat-card:nth-child(3) .stat-value { color: var(--gold); }
+        .stat-card:nth-child(4) .stat-value { color: var(--green); }
+        .stat-card:nth-child(5) .stat-value { color: var(--magenta); }
+        .stat-card:nth-child(6) .stat-value { color: var(--cyan); }
+
+        /* 地图全宽区域 */
+        .map-full {
+            position: relative;
+            margin-bottom: 24px;
+            animation: fadeIn 0.5s ease-out 0.2s backwards;
+        }
+
+        #mapChart { width: 100%; height: 520px; }
+
+        /* 地图上的浮动面板 */
+        .map-panel {
+            position: absolute;
+            background: rgba(3, 3, 8, 0.88);
+            border: 1px solid var(--border-glow);
+            border-radius: 10px;
+            padding: 14px;
+            backdrop-filter: blur(12px);
+        }
+
+        .panel-title {
+            font-size: 10px; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border-glow);
+        }
+
+        /* 左上面板 - 三色环 + 情感 */
+        .panel-left {
+            top: 15px; left: 15px;
+            width: 200px;
+        }
+
+        /* 右上面板 - 四色环 + 等级 + 性别 */
+        .panel-right {
+            top: 15px; right: 15px;
+            width: 180px;
+        }
+
+        /* 面板图表容器 */
+        .panel-chart {
+            height: 120px;
+            margin-bottom: 8px;
+        }
+
+        /* 榜单面板 - 可拖动可折叠 */
+        .rank-panel {
+            position: absolute;
+            background: rgba(3, 3, 8, 0.88);
+            border: 1px solid var(--border-glow);
+            border-radius: 10px;
+            padding: 10px;
+            backdrop-filter: blur(12px);
+            cursor: move;
+            user-select: none;
+            z-index: 10;
+            min-width: 140px;
+        }
+        .rank-panel:hover {
+            border-color: var(--cyan);
+            box-shadow: 0 0 20px var(--cyan-dim);
+        }
+
+        .rank-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .rank-title {
+            font-size: 10px; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .rank-toggle {
+            width: 18px; height: 18px;
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid var(--border-glow);
+            border-radius: 4px;
+            color: var(--cyan);
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        .rank-toggle:hover {
+            background: rgba(0, 240, 255, 0.2);
+            border-color: var(--cyan);
+        }
+
+        /* 排行列表 */
+        .prov-rank { display: flex; flex-direction: column; gap: 2px; }
+        .prov-item {
+            display: flex; justify-content: space-between;
+            font-size: 11px;
+            padding: 2px 4px;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+        .prov-item:hover { background: var(--cyan-dim); }
+        .prov-item .pname { color: var(--text-dim); }
+        .prov-item .pval { color: var(--cyan); font-family: 'JetBrains Mono', monospace; }
+        .prov-item.top1 .pname { color: var(--gold); font-weight: 600; }
+        .prov-item.top1 .pval { color: var(--gold); }
+
+        .foreign-ip {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-glow);
+        }
+        .foreign-ip .fi-title { color: var(--magenta); margin-bottom: 4px; }
+        .foreign-ip .fi-item { display: flex; justify-content: space-between; padding: 1px 0; }
+        .foreign-ip .fi-item .fin { color: var(--text-dim); }
+        .foreign-ip .fi-item .fiv { color: var(--magenta); font-family: 'JetBrains Mono', monospace; }
+
+        .rank-panel.collapsed .prov-rank,
+        .rank-panel.collapsed .foreign-ip { display: none; }
+        .rank-panel.collapsed { min-height: auto; padding: 8px 10px; }
+
+        /* 底部区块 */
+        .trend-wrap { margin-bottom: 24px; animation: fadeIn 0.5s ease-out 0.3s backwards; }
+        #heatTrend { height: 180px; }
+
+        .danmaku-section { margin-bottom: 24px; animation: fadeIn 0.5s ease-out 0.4s backwards; }
+        .danmaku-section .card { padding: 16px; }
+
+        .danmaku-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .danmaku-chart { height: 150px; }
+
+        .segments-section { margin-bottom: 24px; animation: fadeIn 0.5s ease-out 0.5s backwards; }
+
+        .segments-scroll {
+            display: flex; gap: 12px; overflow-x: auto;
+            padding: 10px 0;
+            scrollbar-width: thin; scrollbar-color: var(--cyan-dim) transparent;
+        }
+        .segments-scroll::-webkit-scrollbar { height: 4px; }
+        .segments-scroll::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 2px; }
+
+        .segment-card {
+            min-width: 180px; flex-shrink: 0;
+            background: rgba(0, 240, 255, 0.03);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            border-radius: 10px; padding: 14px;
+            transition: all 0.3s;
+        }
+        .segment-card:hover {
+            background: rgba(0, 240, 255, 0.08);
+            border-color: var(--cyan);
+            box-shadow: 0 0 20px var(--cyan-dim);
+        }
+
+        .segment-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px; font-weight: 600; color: var(--cyan);
+            margin-bottom: 6px;
+        }
+        .segment-count { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+        .segment-bar { height: 4px; background: var(--bg-surface); border-radius: 2px; overflow: hidden; display: flex; margin-bottom: 8px; }
+        .bar-pos { background: var(--green); }
+        .bar-neu { background: var(--text-muted); }
+        .bar-neg { background: var(--red); }
+        .segment-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+        .segment-tag { font-size: 10px; padding: 2px 8px; background: rgba(0, 240, 255, 0.1); color: var(--cyan); border-radius: 8px; }
+
+        .sentiment-section { animation: fadeIn 0.5s ease-out 0.6s backwards; }
+        .sentiment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .sentiment-chart { height: 180px; }
+
+        @media (max-width: 1200px) {
+            .main-three { grid-template-columns: 1fr; }
+            .danmaku-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .container { padding: 16px; }
+            .stats-bar { grid-template-columns: repeat(3, 1fr); }
+            .hero { flex-direction: column; }
+            .cover-wrap { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <header class="header">
+        <a href="/" class="back-btn">← 返回</a>
+        <h1 class="header-title">视频数据分析</h1>
+        <span class="platform-badge">BILIBILI</span>
+    </header>
+
+    <main class="container">
+        <!-- Hero -->
+        <section class="hero">
+            <div class="cover-wrap">
+                <img src="{{ video.cover }}" class="cover" alt="{{ video.title }}" onerror="this.style.display='none'">
+            </div>
+            <div class="hero-info">
+                <h2 class="video-title">{{ video.title }}</h2>
+                <div class="meta-row">
+                    <div class="meta-item"><span class="icon">👤</span><span class="author">{{ video.author }}</span></div>
+                    <div class="meta-item"><span class="icon">📺</span><span id="heroViews">-</span></div>
+                    <div class="meta-item"><span class="icon">💬</span><span id="heroComments">-</span></div>
+                    <div class="meta-item"><span class="icon">🎯</span><span id="heroDanmaku">-</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Bar -->
+        <section class="stats-bar">
+            <div class="stat-card"><div class="stat-value" id="statView">-</div><div class="stat-label">播放</div></div>
+            <div class="stat-card"><div class="stat-value" id="statLike">-</div><div class="stat-label">点赞</div></div>
+            <div class="stat-card"><div class="stat-value" id="statCoin">-</div><div class="stat-label">投币</div></div>
+            <div class="stat-card"><div class="stat-value" id="statCollect">-</div><div class="stat-label">收藏</div></div>
+            <div class="stat-card"><div class="stat-value" id="statShare">-</div><div class="stat-label">转发</div></div>
+            <div class="stat-card"><div class="stat-value" id="statHeat">-</div><div class="stat-label">热度</div></div>
+        </section>
+
+        <!-- 地图全宽 -->
+        <section class="map-full">
+            <div id="mapChart"></div>
+
+            <!-- 左上面板 - 评论/弹幕/播放 + 情感 -->
+            <div class="map-panel panel-left">
+                <div class="panel-title">评论/弹幕/播放</div>
+                <div id="triChart" class="panel-chart"></div>
+
+                <div class="panel-title">评论情感</div>
+                <div id="commentSentiment" class="panel-chart"></div>
+
+                <div class="panel-title">弹幕情感</div>
+                <div id="danmakuSentiment" class="panel-chart"></div>
+            </div>
+
+            <!-- 右上面板 - 点赞/投币/收藏/转发 + 等级 + 性别 -->
+            <div class="map-panel panel-right">
+                <div class="panel-title">互动数据</div>
+                <div id="quadChart" class="panel-chart"></div>
+
+                <div class="panel-title">用户等级</div>
+                <div id="levelChart" class="panel-chart"></div>
+
+                <div class="panel-title">性别比例</div>
+                <div id="genderChart" class="panel-chart"></div>
+            </div>
+
+            <!-- TOP榜单面板 - 右侧 -->
+            <div class="rank-panel" id="rankPanel">
+                <div class="rank-header">
+                    <span class="rank-title">省份 TOP</span>
+                    <button class="rank-toggle" id="rankToggle">−</button>
+                </div>
+                <div class="prov-rank" id="provRank"></div>
+                <div class="foreign-ip" id="foreignIp" style="display:none;"></div>
+            </div>
+        </section>
+
+        <!-- 热度趋势 -->
+        <section class="card trend-wrap">
+            <div class="card-title">热度趋势</div>
+            <div id="heatTrend"></div>
+        </section>
+
+        <!-- 弹幕时间线 -->
+        <section class="danmaku-section">
+            <div class="card">
+                <div class="card-title">弹幕时间分布</div>
+                <div class="danmaku-grid">
+                    <div id="danmakuTimeline" class="danmaku-chart"></div>
+                    <div id="danmakuSentimentBar" class="danmaku-chart"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 弹幕热点时段 -->
+        <section class="segments-section">
+            <div class="card">
+                <div class="card-title">弹幕热点时段</div>
+                <div id="segments" class="segments-scroll"></div>
+            </div>
+        </section>
+
+        <!-- 情感分析 -->
+        <section class="card sentiment-section">
+            <div class="card-title">情感分析</div>
+            <div class="sentiment-grid">
+                <div class="sentiment-chart" id="sentimentComment"></div>
+                <div class="sentiment-chart" id="sentimentDanmaku"></div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const videoId = {{ video.id }};
+
+        // 格式化 - 保留原始值用于显示
+        const fmt = v => {
+            if (v >= 100000000) return (v / 100000000).toFixed(1) + 'E';
+            if (v >= 10000000) return (v / 10000000).toFixed(1) + 'Y';
+            if (v >= 10000) return (v / 10000).toFixed(1) + 'w';
+            if (v >= 1000) return (v / 1000).toFixed(1) + 'k';
+            return v.toLocaleString();
+        };
+
+        const fmtRaw = v => v.toLocaleString();
+
+        // 省份坐标
+        const geoCoords = {
+            '北京': [116.46, 39.92], '天津': [117.2, 39.13], '河北': [114.48, 38.03], '山西': [112.53, 37.87],
+            '内蒙古': [111.65, 40.82], '辽宁': [123.38, 41.8], '吉林': [125.35, 43.88], '黑龙江': [126.63, 45.75],
+            '上海': [121.48, 31.22], '江苏': [118.78, 32.04], '浙江': [120.19, 30.26], '安徽': [117.27, 31.86],
+            '福建': [119.3, 26.08], '江西': [115.89, 28.68], '山东': [118, 36.65], '河南': [113.65, 34.76],
+            '湖北': [114.31, 30.52], '湖南': [112, 28.21], '广东': [113.23, 23.16], '广西': [108.33, 22.84],
+            '海南': [110.35, 20.02], '重庆': [106.54, 29.59], '四川': [104.06, 30.67], '贵州': [106.71, 26.57],
+            '云南': [102.73, 25.04], '西藏': [91.11, 29.97], '陕西': [108.95, 34.27], '甘肃': [103.73, 36.03],
+            '青海': [101.74, 36.56], '宁夏': [106.27, 38.47], '新疆': [87.68, 43.77], '香港': [114.1, 22.2],
+            '澳门': [113.33, 22.13], '台湾': [121.5, 25.03]
+        };
+
+        function getGeo(name) { return geoCoords[name] || [0, 0]; }
+
+        // 加载数据
+        async function loadAll() {
+            try {
+                console.log('开始加载数据...');
+
+                const [detail, summary, region, gender, levels, sentiment, heatTrend, segments] = await Promise.all([
+                    fetch(`/api/videos/${videoId}`).then(r => r.json()),
+                    fetch(`/api/videos/${videoId}/summary`).then(r => r.json()),
+                    fetch(`/api/videos/${videoId}/region`).then(r => r.json()),
+                    fetch(`/api/videos/${videoId}/gender`).then(r => r.json()),
+                    fetch(`/api/videos/${videoId}/levels`).then(r => r.json()),
+                    fetch(`/api/videos/${videoId}/sentiment`).then(r => r.json()),
+                    fetch(`/api/videos/${videoId}/heat-trend`).then(r => r.json()),
+                    fetch(`/api/videos/${videoId}/segments`).then(r => r.json())
+                ]);
+
+                console.log('数据加载完成', { detail, summary, region, gender, levels, sentiment, heatTrend, segments });
+
+                const stats = detail.stats || {};
+
+                // Hero
+                document.getElementById('heroViews').textContent = fmt(stats.view_count || 0) + ' 播放';
+                document.getElementById('heroComments').textContent = fmt(stats.comment_count || 0) + ' 评论';
+                document.getElementById('heroDanmaku').textContent = fmt(stats.danmaku_count || 0) + ' 弹幕';
+
+                // Stats bar
+                const keys = ['view_count', 'like_count', 'coin_count', 'collect_count', 'share_count'];
+                const ids = ['statView', 'statLike', 'statCoin', 'statCollect', 'statShare'];
+                ids.forEach((id, i) => {
+                    const target = stats[keys[i]] || 0;
+                    let cur = 0;
+                    const step = Math.ceil(target / 50);
+                    const timer = setInterval(() => {
+                        cur = Math.min(cur + step, target);
+                        if (cur >= target) { cur = target; clearInterval(timer); }
+                        document.getElementById(id).textContent = fmt(cur);
+                    }, 30);
+                });
+                document.getElementById('statHeat').textContent = (stats.heat_score || 0).toFixed(3);
+
+                // ===== 三色环 =====
+                const tri = echarts.init(document.getElementById('triChart'));
+                tri.setOption({
+                    backgroundColor: 'transparent',
+                    tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                    series: [{
+                        type: 'pie', radius: ['40%', '70%'],
+                        label: { show: true, position: 'outside', formatter: '{b}', color: '#ccc', fontSize: 10 },
+                        labelLine: { show: true, lineStyle: { color: '#555' } },
+                        data: [
+                            { value: summary.tri.评论数, name: '评论', itemStyle: { color: '#00f0ff' } },
+                            { value: summary.tri.弹幕数, name: '弹幕', itemStyle: { color: '#ff00aa' } },
+                            { value: Math.max(1, Math.round(summary.tri.播放量 / 1000)), name: '播放', itemStyle: { color: '#ffd700' } }
+                        ]
+                    }]
+                });
+
+                // ===== 评论情感 =====
+                const cs = echarts.init(document.getElementById('commentSentiment'));
+                const csd = sentiment.comments || {};
+                cs.setOption({
+                    backgroundColor: 'transparent',
+                    tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                    series: [{
+                        type: 'pie', radius: ['35%', '60%'],
+                        label: { show: true, position: 'outside', formatter: '{b}', color: '#ccc', fontSize: 9 },
+                        labelLine: { show: true, lineStyle: { color: '#555' } },
+                        data: [
+                            { name: '正面', value: csd['正面'] || 0, itemStyle: { color: '#00ff88' } },
+                            { name: '中性', value: csd['中性'] || 0, itemStyle: { color: '#666' } },
+                            { name: '负面', value: csd['负面'] || 0, itemStyle: { color: '#ff3366' } }
+                        ]
+                    }]
+                });
+
+                // ===== 弹幕情感 =====
+                const ds = echarts.init(document.getElementById('danmakuSentiment'));
+                const dsd = sentiment.danmaku || {};
+                ds.setOption({
+                    backgroundColor: 'transparent',
+                    tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                    series: [{
+                        type: 'pie', radius: ['35%', '60%'],
+                        label: { show: true, position: 'outside', formatter: '{b}', color: '#ccc', fontSize: 9 },
+                        labelLine: { show: true, lineStyle: { color: '#555' } },
+                        data: [
+                            { name: '正面', value: dsd['正面'] || 0, itemStyle: { color: '#00ff88' } },
+                            { name: '中性', value: dsd['中性'] || 0, itemStyle: { color: '#666' } },
+                            { name: '负面', value: dsd['负面'] || 0, itemStyle: { color: '#ff3366' } }
+                        ]
+                    }]
+                });
+
+                // ===== 地图 =====
+                const map = echarts.init(document.getElementById('mapChart'));
+                const provinces = region.provinces || [];
+                const foreign = region.foreign || [];
+                const maxVal = Math.max(...provinces.map(p => p.value || 0), 1);
+                const scatterData = provinces.filter(p => p.value > 0).slice(0, 20)
+                    .map(p => ({ name: p.name, value: [...getGeo(p.name), p.value] }));
+
+                // 加载中国地图GeoJSON
+                fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+                    .then(res => res.json())
+                    .then(chinaJson => {
+                        echarts.registerMap('china', chinaJson);
+                        map.setOption({
+                            backgroundColor: 'transparent',
+                            tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                            geo: {
+                                map: 'china', roam: true, zoom: 1.2,
+                                itemStyle: {
+                                    areaColor: '#0a1628',
+                                    borderColor: 'rgba(0, 240, 255, 0.3)',
+                                    emphasis: { areaColor: 'rgba(0, 240, 255, 0.35)', label: { show: true, color: '#fff', fontSize: 11 } }
+                                },
+                                label: { show: false }
+                            },
+                            visualMap: {
+                                show: true,
+                                type: 'continuous',
+                                min: 0,
+                                max: maxVal,
+                                text: ['高', '低'],
+                                textStyle: { color: '#aaa', fontSize: 10 },
+                                realtime: false,
+                                calculable: true,
+                                left: 15,
+                                bottom: 15,
+                                inRange: { color: ['#0a1628', '#0d2a4a', '#0e4d7a', '#0d6fa8', '#00c8e0', '#00f0ff'] }
+                            },
+                            series: [
+                                { type: 'map', map: 'china', geoIndex: 0, data: provinces, silent: true },
+                                {
+                                    type: 'effectScatter', coordinateSystem: 'geo',
+                                    data: scatterData,
+                                    symbolSize: v => Math.max(10, Math.sqrt(v[2]) * 2),
+                                    showEffectOn: 'render', rippleEffect: { brushType: 'stroke', scale: 3 },
+                                    itemStyle: { color: '#ff00aa', shadowBlur: 15, shadowColor: '#ff00aa' },
+                                    label: { show: true, formatter: '{b}', color: '#fff', fontSize: 10, position: 'top' }
+                                }
+                            ]
+                        });
+                    });
+
+                // 省份排行
+                // ===== TOP榜单 =====
+                const rankPanel = document.getElementById('rankPanel');
+                const provRank = document.getElementById('provRank');
+                const foreignIpEl = document.getElementById('foreignIp');
+                const rankToggle = document.getElementById('rankToggle');
+                let isCollapsed = false;
+                let sortedProvinces = [...provinces].sort((a, b) => b.value - a.value);
+
+                // 固定显示前8个省份
+                provRank.innerHTML = sortedProvinces.slice(0, 8).map((p, i) =>
+                    `<div class="prov-item${i===0?' top1':''}"><span class="pname">${i+1}. ${p.name}</span><span class="pval">${p.value}</span></div>`
+                ).join('');
+
+                // 国外IP面板
+                if (foreign.length > 0) {
+                    foreignIpEl.style.display = 'block';
+                    foreignIpEl.innerHTML = `<div class="fi-title">🌍 国外</div>` +
+                        foreign.slice(0, 5).map(f =>
+                            `<div class="fi-item"><span class="fin">${f.name}</span><span class="fiv">${f.value}</span></div>`
+                        ).join('');
+                }
+
+                // 折叠/展开
+                rankToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    isCollapsed = !isCollapsed;
+                    rankPanel.classList.toggle('collapsed', isCollapsed);
+                    rankToggle.textContent = isCollapsed ? '+' : '−';
+                });
+
+                // 面板拖动
+                let isDraggingPanel = false, dragOffset = { x: 0, y: 0 };
+                rankPanel.addEventListener('mousedown', (e) => {
+                    if (e.target === rankToggle || e.target.closest('.rank-toggle')) return;
+                    if (e.target.closest('.prov-rank') || e.target.closest('.foreign-ip')) return;
+                    isDraggingPanel = true;
+                    const rect = rankPanel.getBoundingClientRect();
+                    dragOffset.x = e.clientX - rect.left;
+                    dragOffset.y = e.clientY - rect.top;
+                    rankPanel.style.cursor = 'grabbing';
+                    e.preventDefault();
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (isDraggingPanel) {
+                        const mapRect = document.getElementById('mapChart').getBoundingClientRect();
+                        const x = Math.max(0, Math.min(mapRect.width - rankPanel.clientWidth, e.clientX - mapRect.left - dragOffset.x));
+                        const y = Math.max(0, Math.min(mapRect.height - rankPanel.clientHeight, e.clientY - mapRect.top - dragOffset.y));
+                        rankPanel.style.left = x + 'px';
+                        rankPanel.style.top = y + 'px';
+                        rankPanel.style.right = 'auto';
+                        rankPanel.style.bottom = 'auto';
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    isDraggingPanel = false;
+                    rankPanel.style.cursor = 'move';
+                });
+
+                // ===== 四色环 =====
+                const quad = echarts.init(document.getElementById('quadChart'));
+                quad.setOption({
+                    backgroundColor: 'transparent',
+                    tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                    series: [{
+                        type: 'pie', radius: ['40%', '70%'],
+                        label: { show: true, position: 'outside', formatter: '{b}', color: '#ccc', fontSize: 10 },
+                        labelLine: { show: true, lineStyle: { color: '#555' } },
+                        data: [
+                            { name: '点赞', value: summary.quad.点赞, itemStyle: { color: '#ff3366' } },
+                            { name: '投币', value: summary.quad.投币, itemStyle: { color: '#ffd700' } },
+                            { name: '收藏', value: summary.quad.收藏, itemStyle: { color: '#00ff88' } },
+                            { name: '转发', value: summary.quad.转发, itemStyle: { color: '#ff00aa' } }
+                        ]
+                    }]
+                });
+
+                // ===== 用户等级 =====
+                const levelChart = echarts.init(document.getElementById('levelChart'));
+                levelChart.setOption({
+                    backgroundColor: 'transparent',
+                    tooltip: { trigger: 'axis' },
+                    grid: { left: 15, right: 5, top: 3, bottom: 12 },
+                    xAxis: { type: 'category', data: (levels || []).map(d => d.name), axisLine: { lineStyle: { color: '#333' } }, axisLabel: { color: '#666', fontSize: 8 } },
+                    yAxis: { type: 'value', show: false },
+                    series: [{ type: 'bar', data: (levels || []).map(d => d.value), itemStyle: { color: '#00f0ff', borderRadius: [2, 2, 0, 0] } }]
+                });
+
+                // ===== 性别 =====
+                const genderChart = echarts.init(document.getElementById('genderChart'));
+                genderChart.setOption({
+                    backgroundColor: 'transparent',
+                    tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                    series: [{
+                        type: 'pie', radius: ['35%', '60%'],
+                        label: { show: true, position: 'outside', formatter: '{b}', color: '#ccc', fontSize: 9 },
+                        labelLine: { show: true, lineStyle: { color: '#555' } },
+                        data: (gender || []).map((d, i) => ({ ...d, itemStyle: { color: ['#00f0ff', '#ff00aa', '#666'][i] } }))
+                    }]
+                });
+
+                // ===== 热度趋势 =====
+                const trendChart = echarts.init(document.getElementById('heatTrend'));
+                trendChart.setOption({
+                    backgroundColor: 'transparent',
+                    tooltip: { trigger: 'axis' },
+                    grid: { left: 45, right: 20, top: 15, bottom: 25 },
+                    xAxis: { type: 'category', data: heatTrend.dates || [], axisLine: { lineStyle: { color: '#333' } }, axisLabel: { color: '#666' } },
+                    yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: '#222' } }, axisLabel: { color: '#666' } },
+                    series: [{
+                        data: heatTrend.scores || [],
+                        type: 'line', smooth: true,
+                        lineStyle: { color: '#ff00aa', width: 3 },
+                        areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(255,0,170,0.4)' }, { offset: 1, color: 'rgba(255,0,170,0)' }] } },
+                        itemStyle: { color: '#ff00aa' }, symbol: 'circle', symbolSize: 6
+                    }]
+                });
+
+                // ===== 弹幕时间分布 =====
+                const segs = segments.segments || [];
+                const danmakuTimeline = echarts.init(document.getElementById('danmakuTimeline'));
+                danmakuTimeline.setOption({
+                    backgroundColor: 'transparent',
+                    tooltip: { trigger: 'axis' },
+                    grid: { left: 35, right: 10, top: 10, bottom: 25 },
+                    xAxis: { type: 'category', data: segs.map((s, i) => i % 3 === 0 ? s.time_start_str : ''), axisLine: { lineStyle: { color: '#333' } }, axisLabel: { color: '#666', fontSize: 9 } },
+                    yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: '#222' } }, axisLabel: { color: '#666' } },
+                    series: [{
+                        type: 'bar',
+                        data: segs.map((s, i) => ({ value: s.count || 0, itemStyle: { color: i % 2 === 0 ? '#ff00aa' : '#00f0ff', borderRadius: [2, 2, 0, 0] } })),
+                        barWidth: '50%'
+                    }]
+                });
+
+                // 弹幕情感堆叠
+                const danmakuSentimentBar = echarts.init(document.getElementById('danmakuSentimentBar'));
+                danmakuSentimentBar.setOption({
+                    backgroundColor: 'transparent',
+                    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                    legend: { data: ['正面', '中性', '负面'], textStyle: { color: '#888', fontSize: 10 }, top: 5 },
+                    grid: { left: 35, right: 10, top: 30, bottom: 25 },
+                    xAxis: { type: 'category', data: segs.map((s, i) => i % 3 === 0 ? s.time_start_str : ''), axisLine: { lineStyle: { color: '#333' } }, axisLabel: { color: '#666', fontSize: 9 } },
+                    yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: '#222' } }, axisLabel: { color: '#666' } },
+                    series: [
+                        { name: '正面', type: 'bar', data: segs.map(s => s.sentiment['正面'] || 0), itemStyle: { color: '#00ff88' } },
+                        { name: '中性', type: 'bar', data: segs.map(s => s.sentiment['中性'] || 0), itemStyle: { color: '#666' }, stack: 'total' },
+                        { name: '负面', type: 'bar', data: segs.map(s => s.sentiment['负面'] || 0), itemStyle: { color: '#ff3366' }, stack: 'total' }
+                    ]
+                });
+
+                // ===== 弹幕热点时段 =====
+                const segContainer = document.getElementById('segments');
+                if (segs.length === 0) {
+                    segContainer.innerHTML = '<div style="color:#666;font-size:12px;padding:15px;">暂无弹幕数据</div>';
+                } else {
+                    segContainer.innerHTML = segs.map(s => {
+                        const total = (s.sentiment['正面'] || 0) + (s.sentiment['中性'] || 0) + (s.sentiment['负面'] || 0);
+                        const posW = total ? (s.sentiment['正面'] || 0) / total * 100 : 0;
+                        const neuW = total ? (s.sentiment['中性'] || 0) / total * 100 : 0;
+                        const negW = total ? (s.sentiment['负面'] || 0) / total * 100 : 0;
+                        return `
+                            <div class="segment-card">
+                                <div class="segment-time">${s.time_start_str} - ${s.time_end_str}</div>
+                                <div class="segment-count">${s.count} 条弹幕</div>
+                                <div class="segment-bar">
+                                    <div class="bar-pos" style="width:${posW}%"></div>
+                                    <div class="bar-neu" style="width:${neuW}%"></div>
+                                    <div class="bar-neg" style="width:${negW}%"></div>
+                                </div>
+                                <div class="segment-tags">
+                                    ${(s.keywords || []).slice(0, 3).map(k => `<span class="segment-tag">${k}</span>`).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // ===== 情感分析总览 =====
+                const sentimentComment = echarts.init(document.getElementById('sentimentComment'));
+                sentimentComment.setOption({
+                    backgroundColor: 'transparent',
+                    tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                    series: [{
+                        type: 'pie', radius: ['30%', '65%'],
+                        label: { show: true, formatter: '{b}\n{c}', color: '#888', fontSize: 11 },
+                        data: [
+                            { name: '正面', value: csd['正面'] || 0, itemStyle: { color: '#00ff88' } },
+                            { name: '中性', value: csd['中性'] || 0, itemStyle: { color: '#666' } },
+                            { name: '负面', value: csd['负面'] || 0, itemStyle: { color: '#ff3366' } }
+                        ]
+                    }]
+                });
+
+                const sentimentDanmaku = echarts.init(document.getElementById('sentimentDanmaku'));
+                sentimentDanmaku.setOption({
+                    backgroundColor: 'transparent',
+                    tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+                    series: [{
+                        type: 'pie', radius: ['30%', '65%'],
+                        label: { show: true, formatter: '{b}\n{c}', color: '#888', fontSize: 11 },
+                        data: [
+                            { name: '正面', value: dsd['正面'] || 0, itemStyle: { color: '#00ff88' } },
+                            { name: '中性', value: dsd['中性'] || 0, itemStyle: { color: '#666' } },
+                            { name: '负面', value: dsd['负面'] || 0, itemStyle: { color: '#ff3366' } }
+                        ]
+                    }]
+                });
+
+                console.log('所有图表渲染完成');
+
+            } catch (e) {
+                console.error('加载失败:', e);
+            }
+        }
+
+        loadAll();
+    </script>
+</body>
+</html>

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 视频热度分析系统</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --void: #030508;
+            --surface: #0a1019;
+            --card-bg: rgba(12, 20, 35, 0.85);
+            --card-border: rgba(0, 212, 255, 0.15);
+            --cyan: #00d4ff;
+            --cyan-glow: rgba(0, 212, 255, 0.4);
+            --cyan-dim: rgba(0, 212, 255, 0.08);
+            --magenta: #ff3d9a;
+            --gold: #ffc107;
+            --text: #e8f4f8;
+            --text-secondary: rgba(232, 244, 248, 0.6);
+            --gradient-heat: linear-gradient(135deg, #00d4ff 0%, #ff3d9a 50%, #ffc107 100%);
+        }
+
+        [data-theme="light"] {
+            --void: #f0f2f7;
+            --surface: #ffffff;
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --card-border: rgba(0, 0, 0, 0.1);
+            --cyan: #0088cc;
+            --cyan-glow: rgba(0, 136, 204, 0.3);
+            --cyan-dim: rgba(0, 136, 204, 0.08);
+            --magenta: #e91e63;
+            --text: #1a1a2e;
+            --text-secondary: rgba(26, 26, 46, 0.6);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, sans-serif;
+            background: var(--void);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--gradient-heat);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin: 0 auto 16px;
+            box-shadow: 0 0 60px var(--cyan-glow);
+        }
+
+        .logo-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            background: var(--gradient-heat);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(20px);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 14px;
+            background: transparent;
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .tab:hover {
+            border-color: var(--cyan);
+            color: var(--text);
+        }
+
+        .tab.active {
+            background: var(--cyan-dim);
+            border-color: var(--cyan);
+            color: var(--cyan);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 18px;
+            background: var(--void);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--cyan);
+            box-shadow: 0 0 20px var(--cyan-dim);
+        }
+
+        .code-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .code-group .form-input {
+            flex: 1;
+        }
+
+        .btn-code {
+            padding: 14px 20px;
+            background: var(--cyan-dim);
+            border: 1px solid var(--cyan);
+            border-radius: 10px;
+            color: var(--cyan);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+
+        .btn-code:hover:not(:disabled) {
+            background: var(--cyan);
+            color: #fff;
+        }
+
+        .btn-code:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 16px;
+            background: var(--gradient-heat);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 30px var(--cyan-glow);
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 50px var(--cyan-glow);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            padding: 14px 18px;
+            border-radius: 10px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.error {
+            background: rgba(255, 82, 82, 0.1);
+            border: 1px solid var(--red);
+            color: var(--red);
+            display: block;
+        }
+
+        .message.success {
+            background: rgba(0, 230, 118, 0.1);
+            border: 1px solid var(--green);
+            color: var(--green);
+            display: block;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 24px;
+        }
+
+        .back-link a {
+            color: var(--cyan);
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+
+        .admin-hint {
+            text-align: center;
+            margin-top: 20px;
+            padding: 14px;
+            background: var(--cyan-dim);
+            border-radius: 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .admin-hint strong {
+            color: var(--cyan);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .reset-form {
+            display: none;
+        }
+
+        .reset-form.active {
+            display: block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner-small {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <div class="logo-icon">📊</div>
+            <div class="logo-text">HEAT ANALYTICS</div>
+        </div>
+
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" data-tab="login">登录</button>
+                <button class="tab" data-tab="register">注册</button>
+            </div>
+
+            <div id="message" class="message"></div>
+
+            <!-- 登录表单 -->
+            <form id="loginForm" class="tab-content active">
+                <div class="form-group">
+                    <label class="form-label">用户名 / 邮箱</label>
+                    <input type="text" class="form-input" id="loginUsername" placeholder="请输入用户名或邮箱" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">密码</label>
+                    <input type="password" class="form-input" id="loginPassword" placeholder="请输入密码" required>
+                </div>
+                <button type="submit" class="btn-submit" id="loginBtn">登录</button>
+                <div class="back-link">
+                    <a href="#" onclick="showResetForm(); return false;">忘记密码？</a>
+                </div>
+            </form>
+
+            <!-- 注册表单 -->
+            <form id="registerForm" class="tab-content">
+                <div class="form-group">
+                    <label class="form-label">用户名</label>
+                    <input type="text" class="form-input" id="regUsername" placeholder="设置用户名" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">邮箱</label>
+                    <input type="email" class="form-input" id="regEmail" placeholder="请输入邮箱地址" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">密码</label>
+                    <input type="password" class="form-input" id="regPassword" placeholder="设置密码（至少6位）" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">验证码</label>
+                    <div class="code-group">
+                        <input type="text" class="form-input" id="regCode" placeholder="邮箱验证码" required>
+                        <button type="button" class="btn-code" id="sendRegCode" onclick="sendCode('register')">发送验证码</button>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit" id="regBtn">注册</button>
+            </form>
+
+            <!-- 找回密码表单 -->
+            <form id="resetForm" class="reset-form">
+                <div class="form-group">
+                    <label class="form-label">邮箱</label>
+                    <input type="email" class="form-input" id="resetEmail" placeholder="请输入注册邮箱" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">验证码</label>
+                    <div class="code-group">
+                        <input type="text" class="form-input" id="resetCode" placeholder="邮箱验证码" required>
+                        <button type="button" class="btn-code" id="sendResetCode" onclick="sendCode('reset')">发送验证码</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">新密码</label>
+                    <input type="password" class="form-input" id="resetPassword" placeholder="设置新密码（至少6位）" required>
+                </div>
+                <button type="submit" class="btn-submit" id="resetBtn">重置密码</button>
+                <div class="back-link">
+                    <a href="#" onclick="hideResetForm(); return false;">返回登录</a>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <script>
+        // Tab切换
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab + 'Form').classList.add('active');
+                hideMessage();
+            });
+        });
+
+        function showMessage(msg, type) {
+            const el = document.getElementById('message');
+            el.textContent = msg;
+            el.className = 'message ' + type;
+            el.style.display = 'block';
+        }
+
+        function hideMessage() {
+            document.getElementById('message').style.display = 'none';
+        }
+
+        function showResetForm() {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('resetForm').classList.add('active');
+            hideMessage();
+        }
+
+        function hideResetForm() {
+            document.getElementById('resetForm').classList.remove('active');
+            document.querySelector('[data-tab="login"]').click();
+            hideMessage();
+        }
+
+        // 发送验证码
+        async function sendCode(type) {
+            const email = type === 'register'
+                ? document.getElementById('regEmail').value
+                : document.getElementById('resetEmail').value;
+
+            if (!email) {
+                showMessage('请先输入邮箱地址', 'error');
+                return;
+            }
+
+            const btn = type === 'register'
+                ? document.getElementById('sendRegCode')
+                : document.getElementById('sendResetCode');
+
+            btn.disabled = true;
+            let countdown = 60;
+            btn.textContent = `${countdown}s`;
+
+            const timer = setInterval(() => {
+                countdown--;
+                if (countdown <= 0) {
+                    clearInterval(timer);
+                    btn.disabled = false;
+                    btn.textContent = '发送验证码';
+                } else {
+                    btn.textContent = `${countdown}s`;
+                }
+            }, 1000);
+
+            try {
+                const resp = await fetch('/auth/send_code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, type })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showMessage(data.message + (data.code ? '<br>验证码: <strong style="font-size:18px;color:var(--cyan);">' + data.code + '</strong>' : ''), 'success');
+                    clearInterval(timer);
+                    btn.disabled = false;
+                    btn.textContent = '发送验证码';
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+                clearInterval(timer);
+                btn.disabled = false;
+                btn.textContent = '发送验证码';
+            }
+        }
+
+        // 登录
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-small"></span>';
+
+            try {
+                const resp = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    showMessage('登录成功，正在跳转...', 'success');
+                    setTimeout(() => {
+                        if (data.user.role === 'admin') {
+                            location.href = '/admin';
+                        } else {
+                            location.href = '/';
+                        }
+                    }, 1000);
+                } else {
+                    showMessage(data.error, 'error');
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+            }
+
+            btn.disabled = false;
+            btn.textContent = '登录';
+        });
+
+        // 注册
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('regBtn');
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const code = document.getElementById('regCode').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-small"></span>';
+
+            try {
+                const resp = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password, code })
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    showMessage('注册成功，请登录', 'success');
+                    document.querySelector('[data-tab="login"]').click();
+                    document.getElementById('loginUsername').value = username;
+                } else {
+                    showMessage(data.error, 'error');
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+            }
+
+            btn.disabled = false;
+            btn.textContent = '注册';
+        });
+
+        // 重置密码
+        document.getElementById('resetForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('resetBtn');
+            const email = document.getElementById('resetEmail').value;
+            const code = document.getElementById('resetCode').value;
+            const new_password = document.getElementById('resetPassword').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-small"></span>';
+
+            try {
+                const resp = await fetch('/auth/reset_password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, code, new_password })
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    showMessage('密码重置成功，请登录', 'success');
+                    setTimeout(hideResetForm, 1500);
+                } else {
+                    showMessage(data.error, 'error');
+                }
+            } catch (e) {
+                showMessage('请求失败: ' + e.message, 'error');
+            }
+
+            btn.disabled = false;
+            btn.textContent = '重置密码';
+        });
+    </script>
+</body>
+</html>
